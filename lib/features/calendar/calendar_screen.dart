@@ -1,0 +1,154 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:money_tracker_mobile/core/api_client.dart';
+import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
+import 'package:money_tracker_mobile/models/transaction.dart';
+
+class CalendarScreen extends StatefulWidget {
+  const CalendarScreen({super.key});
+
+  @override
+  State<CalendarScreen> createState() => _CalendarScreenState();
+}
+
+class _CalendarScreenState extends State<CalendarScreen> {
+  final _repo = TransactionsRepository(ApiClient());
+  DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  List<MoneyTransaction> _transactions = [];
+  bool _loading = true;
+  static const _weekdays = ['月','火','水','木','金','土','日'];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  String _dateStr(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    final start = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final end = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+    try {
+      final list = await _repo.list(
+        startDate: _dateStr(start),
+        endDate: _dateStr(end),
+        pageSize: 200,
+      );
+      setState(() => _transactions = list);
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  void _prevMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+    });
+    _load();
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+    });
+    _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: true,
+      bottom: false,
+      child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(onPressed: _prevMonth, icon: const Icon(Icons.chevron_left)),
+              Text(DateFormat('yyyy/MM').format(_currentMonth), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              IconButton(onPressed: _nextMonth, icon: const Icon(Icons.chevron_right)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Weekday header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: _weekdays
+                .map((label) => Expanded(child: Center(child: Text(label, style: const TextStyle(color: Colors.grey)))))
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+
+          if (_loading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else
+            Expanded(child: _buildCalendarGrid()),
+        ],
+      ),
+    ),
+    );
+  }
+
+  Widget _buildCalendarGrid() {
+    final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+
+    // Monday-first weekday index (Mon=0..Sun=6)
+    final firstWeekday = (firstDay.weekday + 6) % 7;
+    final daysInMonth = lastDay.day;
+    final totalCells = ((firstWeekday + daysInMonth + 6) ~/ 7) * 7; // round up to full weeks
+
+    final cells = List<Widget>.generate(totalCells, (i) {
+      final dayNum = i - firstWeekday + 1;
+      if (dayNum < 1 || dayNum > daysInMonth) {
+        return const SizedBox.shrink();
+      }
+      final date = DateTime(_currentMonth.year, _currentMonth.month, dayNum);
+      final dayTx = _transactions.where((t) {
+        final d = t.date.toLocal();
+        return d.year == date.year && d.month == date.month && d.day == date.day;
+      }).toList();
+
+      final income = dayTx.where((t) => t.type == 'income').fold<double>(0, (s, t) => s + t.amount);
+      final expense = dayTx.where((t) => t.type == 'expense').fold<double>(0, (s, t) => s + t.amount);
+
+      return InkWell(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${DateFormat('MM/dd').format(date)} 収入:+${income.toStringAsFixed(0)} 支出:-${expense.toStringAsFixed(0)} (${dayTx.length}件)')),
+          );
+        },
+        child: Container(
+          margin: const EdgeInsets.all(2),
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('$dayNum', style: const TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              if (income > 0)
+                Text('+${income.toStringAsFixed(0)}', style: TextStyle(color: Colors.green.shade700, fontSize: 12)),
+              if (expense > 0)
+                Text('-${expense.toStringAsFixed(0)}', style: TextStyle(color: Colors.red.shade700, fontSize: 12)),
+              // keep compact when no data
+            ],
+          ),
+        ),
+      );
+    });
+
+    return GridView.count(
+      crossAxisCount: 7,
+      children: cells,
+    );
+  }
+}

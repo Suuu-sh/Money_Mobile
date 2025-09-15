@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:money_tracker_mobile/features/categories/categories_screen.dart';
-import 'package:money_tracker_mobile/features/stats/dashboard_screen.dart';
-import 'package:money_tracker_mobile/features/transactions/transactions_screen.dart';
+import 'package:money_tracker_mobile/features/input/input_screen.dart';
+import 'package:money_tracker_mobile/features/calendar/calendar_screen.dart';
+import 'package:money_tracker_mobile/features/reports/reports_screen.dart';
 import 'package:money_tracker_mobile/features/settings/settings_screen.dart';
 
 class AppShell extends StatefulWidget {
@@ -14,9 +14,9 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _index = 0;
   final _pages = const [
-    DashboardScreen(),
-    TransactionsScreen(),
-    CategoriesScreen(),
+    InputScreen(),
+    CalendarScreen(),
+    ReportsScreen(),
     // Settings without const due to field
   ];
 
@@ -34,13 +34,12 @@ class _AppShellState extends State<AppShell> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'ダッシュボード'),
-          NavigationDestination(icon: Icon(Icons.list_alt_outlined), selectedIcon: Icon(Icons.list_alt), label: '取引'),
-          NavigationDestination(icon: Icon(Icons.category_outlined), selectedIcon: Icon(Icons.category), label: 'カテゴリ'),
+          NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle), label: '入力'),
+          NavigationDestination(icon: Icon(Icons.calendar_today_outlined), selectedIcon: Icon(Icons.calendar_today), label: 'カレンダー'),
+          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'レポート'),
           NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: '設定'),
         ],
       ),
     );
   }
 }
-

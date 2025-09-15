@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:money_tracker_mobile/core/app_shell.dart';
 import 'package:money_tracker_mobile/core/app_state.dart';
-import 'package:money_tracker_mobile/features/auth/login_screen.dart';
+// Login screen is disabled during testing
 import 'package:money_tracker_mobile/core/token_store.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/auth/auth_repository.dart';
+import 'package:money_tracker_mobile/models/user.dart';
 
 void main() {
   runApp(const MoneyTrackerApp());
@@ -27,15 +28,13 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
   }
 
   Future<void> _bootstrap() async {
-    final token = TokenStore.instance.token;
-    if (token != null && token.isNotEmpty) {
-      try {
-        final user = await AuthRepository(ApiClient()).me();
-        AppState.instance.auth.value = AuthSession(token: token, user: user);
-      } catch (_) {
-        // ignore failures; stay logged out
-      }
-    }
+    // Always mark as logged in for testing
+    const fakeToken = 'dev-test-token';
+    await TokenStore.instance.setToken(fakeToken);
+    AppState.instance.auth.value = AuthSession(
+      token: fakeToken,
+      user: User(id: 0, email: 'test@example.com', name: 'Tester'),
+    );
     if (mounted) setState(() => _bootstrapped = true);
   }
 
@@ -46,18 +45,13 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
         home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
-    return ValueListenableBuilder<AuthSession?>(
-      valueListenable: AppState.instance.auth,
-      builder: (context, session, _) {
-        return MaterialApp(
-          title: 'MoneyTracker',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF22C55E)),
-            useMaterial3: true,
-          ),
-          home: session == null ? const LoginScreen() : const AppShell(),
-        );
-      },
+    return MaterialApp(
+      title: 'MoneyTracker',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF22C55E)),
+        useMaterial3: true,
+      ),
+      home: const AppShell(),
     );
   }
 }
