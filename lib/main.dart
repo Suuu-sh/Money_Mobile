@@ -89,7 +89,7 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
                   error: const Color(0xFFEF4444), // red-500
                 ),
                 scaffoldBackgroundColor: const Color(0xFFF1F5F9),
-                cardTheme: CardTheme(
+                cardTheme: CardThemeData(
                   color: const Color(0xFFFFFFFF),
                   surfaceTintColor: Colors.transparent,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -111,7 +111,7 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
                   error: const Color(0xFFEF4444), // red-500
                 ),
                 scaffoldBackgroundColor: const Color(0xFF0F172A),
-                cardTheme: CardTheme(
+                cardTheme: CardThemeData(
                   color: const Color(0xFF1E293B),
                   surfaceTintColor: Colors.transparent,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
