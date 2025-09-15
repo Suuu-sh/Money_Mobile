@@ -78,10 +78,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final onSurface = theme.colorScheme.onSurface;
-    final borderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade300;
+    final borderColor = theme.colorScheme.outlineVariant; // align to frontend slate tone
     final selectedBorder = theme.colorScheme.primary;
     final selectedBg = theme.colorScheme.primary.withOpacity(isDark ? 0.12 : 0.06);
-    final weekdayStyle = TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600);
+    final weekdayStyle = TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B));
     return SafeArea(
       top: true,
       bottom: false,
@@ -175,7 +175,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final isDark = theme.brightness == Brightness.dark;
       final gridColor = _isSameDay(_selectedDate, date)
           ? theme.colorScheme.primary
-          : (isDark ? Colors.grey.shade700 : Colors.grey.shade300);
+          : theme.colorScheme.outlineVariant;
       final col = i % 7;
       final row = i ~/ 7;
       final totalRows = (totalCells / 7).ceil();
@@ -223,7 +223,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
-                  color: isCurrent ? Theme.of(context).colorScheme.onSurface : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade600 : Colors.grey.shade400),
+                  color: isCurrent ? Theme.of(context).colorScheme.onSurface : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8)),
                 ),
               ),
               const SizedBox(height: 2),

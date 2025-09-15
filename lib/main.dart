@@ -75,21 +75,48 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
             return MaterialApp(
               title: 'MoneyTracker',
               theme: ThemeData(
-                colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF22C55E), brightness: Brightness.light),
-                scaffoldBackgroundColor: const Color(0xFFF8FAF7),
                 useMaterial3: true,
+                colorScheme: ColorScheme.fromSeed(
+                  seedColor: const Color(0xFF22C55E), // primary green
+                  brightness: Brightness.light,
+                ).copyWith(
+                  primary: const Color(0xFF22C55E),
+                  surface: const Color(0xFFF8FAFC), // slate-50
+                  surfaceVariant: const Color(0xFFE2E8F0), // slate-200
+                  background: const Color(0xFFF1F5F9), // slate-100
+                  outlineVariant: const Color(0xFFCBD5E1), // slate-300
+                  secondary: const Color(0xFF3B82F6), // blue-500
+                  error: const Color(0xFFEF4444), // red-500
+                ),
+                scaffoldBackgroundColor: const Color(0xFFF1F5F9),
+                cardTheme: CardTheme(
+                  color: const Color(0xFFFFFFFF),
+                  surfaceTintColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                dividerColor: const Color(0xFFCBD5E1),
               ),
               darkTheme: ThemeData(
+                useMaterial3: true,
                 colorScheme: ColorScheme.fromSeed(
                   seedColor: const Color(0xFF22C55E),
                   brightness: Brightness.dark,
                 ).copyWith(
-                  surface: const Color(0xFF151718),
-                  surfaceContainer: const Color(0xFF1B1E20),
-                  background: const Color(0xFF121415),
+                  primary: const Color(0xFF22C55E),
+                  surface: const Color(0xFF1E293B), // slate-800
+                  surfaceVariant: const Color(0xFF0B1220), // deep slate
+                  background: const Color(0xFF0F172A), // slate-900
+                  outlineVariant: const Color(0xFF334155), // slate-700
+                  secondary: const Color(0xFF3B82F6), // blue-500
+                  error: const Color(0xFFEF4444), // red-500
                 ),
-                scaffoldBackgroundColor: const Color(0xFF121415),
-                useMaterial3: true,
+                scaffoldBackgroundColor: const Color(0xFF0F172A),
+                cardTheme: CardTheme(
+                  color: const Color(0xFF1E293B),
+                  surfaceTintColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                dividerColor: const Color(0xFF334155),
               ),
               themeMode: mode,
               locale: const Locale('ja'),
