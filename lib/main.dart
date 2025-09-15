@@ -72,8 +72,15 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
             useMaterial3: true,
           ),
           darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF22C55E), brightness: Brightness.dark),
-            scaffoldBackgroundColor: const Color(0xFF0F1112),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF22C55E),
+              brightness: Brightness.dark,
+            ).copyWith(
+              surface: const Color(0xFF151718),
+              surfaceContainer: const Color(0xFF1B1E20),
+              background: const Color(0xFF121415),
+            ),
+            scaffoldBackgroundColor: const Color(0xFF121415), // 落ち着いた黒
             useMaterial3: true,
           ),
           themeMode: mode,

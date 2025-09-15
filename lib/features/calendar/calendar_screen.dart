@@ -167,7 +167,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ? theme.colorScheme.primary.withOpacity(isDark ? 0.12 : 0.06)
                 : null,
             border: Border(
-              // 外枠は透明にしてアンチエイリアスで滲まないようにする
+              // 左右外枠は消す（内部線のみ）
               left: BorderSide(
                 color: isFirstCol ? Colors.transparent : gridColor,
                 width: isFirstCol ? 0 : (edgeToEdge ? 0.5 : 1),
@@ -176,10 +176,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 color: isLastCol ? Colors.transparent : gridColor,
                 width: isLastCol ? 0 : (edgeToEdge ? 0.5 : 1),
               ),
-              top: const BorderSide(color: Colors.transparent, width: 0),
+              // 上端は1行目のみ描画して外枠を作る
+              top: BorderSide(
+                color: row == 0 ? gridColor : Colors.transparent,
+                width: row == 0 ? (edgeToEdge ? 0.5 : 1) : 0,
+              ),
+              // 下端は最終行も含めて描画（外枠を出す）。内部線も維持
               bottom: BorderSide(
-                color: isLastRow ? Colors.transparent : gridColor,
-                width: isLastRow ? 0 : (edgeToEdge ? 0.5 : 1),
+                color: gridColor,
+                width: edgeToEdge ? 0.5 : 1,
               ),
             ),
             borderRadius: edgeToEdge ? BorderRadius.zero : BorderRadius.circular(8),
