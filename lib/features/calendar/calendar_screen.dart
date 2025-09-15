@@ -100,30 +100,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
           const SizedBox(height: 6),
 
-          // Calendar grid (edge-to-edge)
-          if (_loading)
-            const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 24), child: CircularProgressIndicator()))
-          else
-            _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
+          // Scrollable content area to prevent bottom overflow
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 88),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Calendar grid (edge-to-edge)
+                  if (_loading)
+                    const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 24), child: CircularProgressIndicator()))
+                  else
+                    _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
 
-          // Monthly net summary (between calendar and daily transactions)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: _buildMonthlyNetSummary(context),
-          ),
+                  // Monthly net summary (between calendar and daily transactions)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: _buildMonthlyNetSummary(context),
+                  ),
 
-          // Day transactions list (with side padding)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _buildSelectedDateLabel(context),
+                  // Day transactions list (with side padding)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildSelectedDateLabel(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildDayTransactionsList(),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildDayTransactionsList(),
           ),
         ],
       ),
