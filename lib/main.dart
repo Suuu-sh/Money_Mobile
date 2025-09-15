@@ -8,6 +8,7 @@ import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/auth/auth_repository.dart';
 import 'package:money_tracker_mobile/models/user.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,16 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
       token: fakeToken,
       user: User(id: 0, email: 'test@example.com', name: 'Tester'),
     );
+    // Load theme mode from prefs
+    final prefs = await SharedPreferences.getInstance();
+    final mode = prefs.getString('themeMode');
+    if (mode == 'dark') {
+      AppState.instance.themeMode.value = ThemeMode.dark;
+    } else if (mode == 'light') {
+      AppState.instance.themeMode.value = ThemeMode.light;
+    } else if (mode == 'system') {
+      AppState.instance.themeMode.value = ThemeMode.system;
+    }
     if (mounted) setState(() => _bootstrapped = true);
   }
 
@@ -50,21 +61,33 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
         home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
-    return MaterialApp(
-      title: 'MoneyTracker',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF22C55E)),
-        useMaterial3: true,
-      ),
-      // Japanese UI + date symbols
-      locale: const Locale('ja'),
-      supportedLocales: const [Locale('ja'), Locale('en')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: const AppShell(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppState.instance.themeMode,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'MoneyTracker',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF22C55E), brightness: Brightness.light),
+            scaffoldBackgroundColor: const Color(0xFFF8FAF7),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF22C55E), brightness: Brightness.dark),
+            scaffoldBackgroundColor: const Color(0xFF0F1112),
+            useMaterial3: true,
+          ),
+          themeMode: mode,
+          // Japanese UI + date symbols
+          locale: const Locale('ja'),
+          supportedLocales: const [Locale('ja'), Locale('en')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const AppShell(),
+        );
+      },
     );
   }
 }
