@@ -66,6 +66,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
+    final borderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade300;
+    final selectedBorder = theme.colorScheme.primary;
+    final selectedBg = theme.colorScheme.primary.withOpacity(isDark ? 0.12 : 0.06);
+    final weekdayStyle = TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600);
     return SafeArea(
       top: true,
       bottom: false,
@@ -87,7 +94,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: _weekdays
-                .map((label) => Expanded(child: Center(child: Text(label, style: const TextStyle(color: Colors.grey)))))
+                .map((label) => Expanded(child: Center(child: Text(label, style: weekdayStyle))))
                 .toList(),
           ),
           const SizedBox(height: 6),
@@ -144,9 +151,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
           margin: edgeToEdge ? EdgeInsets.zero : const EdgeInsets.all(2),
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: _isSameDay(_selectedDate, date) ? Colors.green.withOpacity(0.06) : null,
+            color: _isSameDay(_selectedDate, date) ? Theme.of(context).colorScheme.primary.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.06) : null,
             border: Border.all(
-              color: _isSameDay(_selectedDate, date) ? Colors.green : Colors.grey.shade300,
+              color: _isSameDay(_selectedDate, date) ? Theme.of(context).colorScheme.primary : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : Colors.grey.shade300),
               width: edgeToEdge ? 0.5 : 1,
             ),
             borderRadius: edgeToEdge ? BorderRadius.zero : BorderRadius.circular(8),
@@ -159,7 +166,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
-                  color: isCurrent ? Colors.black : Colors.grey.shade400,
+                  color: isCurrent ? Theme.of(context).colorScheme.onSurface : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade600 : Colors.grey.shade400),
                 ),
               ),
               const SizedBox(height: 2),
@@ -168,32 +175,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.08),
+                    color: Colors.red.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.24 : 0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     expense.toStringAsFixed(0),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.red.shade700, fontSize: 9, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.red.shade300 : Colors.red.shade700, fontSize: 9, fontWeight: FontWeight.w600),
                   ),
                 ),
               if (expense == 0 && income > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.08),
+                    color: Colors.green.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.24 : 0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     income.toStringAsFixed(0),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.green.shade700, fontSize: 9, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.green.shade300 : Colors.green.shade700, fontSize: 9, fontWeight: FontWeight.w600),
                   ),
                 ),
               if (expense == 0 && income == 0)
-                Text('—', style: TextStyle(color: isCurrent ? Colors.grey.shade400 : Colors.grey.shade300, fontSize: 10)),
+                Text(
+                  '—',
+                  style: TextStyle(
+                    color: isCurrent
+                        ? (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade600 : Colors.grey.shade400)
+                        : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                    fontSize: 10,
+                  ),
+                ),
             ],
           ),
         ),
