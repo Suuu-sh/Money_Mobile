@@ -4,6 +4,7 @@ import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
+import 'package:money_tracker_mobile/features/transactions/transaction_edit_sheet.dart';
 // import removed: input is opened from global FAB
 
 class CalendarScreen extends StatefulWidget {
@@ -348,11 +349,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
             subtitle: Text(t.description.isEmpty ? '' : t.description),
             trailing: Text(
               '$sign${t.amount.toStringAsFixed(0)}',
-              style: TextStyle(color: color, fontWeight: FontWeight.bold),
+              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18),
             ),
+            onTap: () async {
+              final updated = await _openEditTransaction(t);
+              if (updated == true) _load();
+            },
           );
         },
       ),
+    );
+  }
+
+  Future<bool?> _openEditTransaction(MoneyTransaction t) async {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => TransactionEditSheet(transaction: t),
     );
   }
 

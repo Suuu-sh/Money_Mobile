@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
+import 'package:money_tracker_mobile/features/transactions/transaction_edit_sheet.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -54,8 +55,16 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   subtitle: Text(t.description.isEmpty ? t.date.toIso8601String().substring(0, 10) : t.description),
                   trailing: Text(
                     '$sign${t.amount.toStringAsFixed(0)}',
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18),
                   ),
+                  onTap: () async {
+                    final updated = await showModalBottomSheet<bool>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (ctx) => TransactionEditSheet(transaction: t),
+                    );
+                    if (updated == true) _refresh();
+                  },
                 );
               },
             ),
@@ -136,4 +145,3 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 }
-
