@@ -4,6 +4,7 @@ import 'package:money_tracker_mobile/features/calendar/calendar_screen.dart';
 import 'package:money_tracker_mobile/features/reports/reports_screen.dart';
 import 'package:money_tracker_mobile/features/settings/settings_screen.dart';
 import 'package:money_tracker_mobile/features/input/input_screen.dart';
+import 'package:money_tracker_mobile/features/common/quick_actions.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -91,15 +92,23 @@ class _AppShellState extends State<AppShell> {
   void _openQuickInput() async {
     await showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: SizedBox(
-            height: MediaQuery.of(ctx).size.height * 0.8,
-            child: InputScreen(initialDate: DateTime.now()),
-          ),
-        ),
+      builder: (ctx) => QuickActionSheet(
+        onCreateTransaction: () async {
+          Navigator.of(ctx).pop();
+          await showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            builder: (inner) => SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: MediaQuery.of(inner).viewInsets.bottom),
+                child: SizedBox(
+                  height: MediaQuery.of(inner).size.height * 0.8,
+                  child: const InputScreen(),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
