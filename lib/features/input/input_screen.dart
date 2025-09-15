@@ -68,20 +68,20 @@ class _InputScreenState extends State<InputScreen> {
         description: _descController.text,
         date: _date,
       );
-      setState(() {
+      if (mounted) {
         _message = '取引を追加しました';
         _amountController.clear();
         _descController.clear();
-      });
+      }
       // クイック入力用途では追加後に閉じる + 通知
       AppState.instance.bumpDataVersion();
-      if (Navigator.of(context).canPop()) {
+      if (mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop(true);
       }
     } catch (e) {
-      setState(() => _message = '取引の作成に失敗しました');
+      if (mounted) setState(() => _message = '取引の作成に失敗しました');
     } finally {
-      setState(() => _submitting = false);
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
