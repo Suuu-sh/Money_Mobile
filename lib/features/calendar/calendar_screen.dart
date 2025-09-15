@@ -113,7 +113,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               children: [
                 Expanded(child: _buildSelectedDateLabel(context)),
                 const SizedBox(width: 8),
-                FilledButton.icon(
+                IconButton.filled(
                   onPressed: () async {
                     final date = _selectedDate ?? DateTime.now();
                     await showModalBottomSheet(
@@ -133,7 +133,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     _load();
                   },
                   icon: const Icon(Icons.add),
-                  label: const Text('入力'),
+                  tooltip: '入力',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+                  iconSize: 18,
                 ),
               ],
             ),
