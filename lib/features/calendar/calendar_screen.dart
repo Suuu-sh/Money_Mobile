@@ -174,7 +174,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               // Show daily total (prefer expense, otherwise income). No sign prefix.
               if (expense > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
                   decoration: BoxDecoration(
                     color: Colors.red.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(6),
@@ -183,12 +183,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     expense.toStringAsFixed(0),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.red.shade700, fontSize: 10, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: Colors.red.shade700, fontSize: 9, fontWeight: FontWeight.w600),
                   ),
                 ),
               if (expense == 0 && income > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
                   decoration: BoxDecoration(
                     color: Colors.green.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(6),
@@ -197,7 +197,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     income.toStringAsFixed(0),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.green.shade700, fontSize: 10, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: Colors.green.shade700, fontSize: 9, fontWeight: FontWeight.w600),
                   ),
                 ),
               if (expense == 0 && income == 0)
@@ -210,7 +210,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return GridView.count(
       crossAxisCount: 7,
-      childAspectRatio: 0.95,
+      childAspectRatio: 0.90,
       mainAxisSpacing: edgeToEdge ? 0 : 4,
       crossAxisSpacing: edgeToEdge ? 0 : 4,
       padding: EdgeInsets.zero,
