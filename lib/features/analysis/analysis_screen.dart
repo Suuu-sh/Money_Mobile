@@ -214,6 +214,12 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     );
   }
 
+  Color _parseHex(String hex, {int alpha = 0xFF}) {
+    final cleaned = hex.replaceFirst('#', '');
+    final val = int.tryParse(cleaned, radix: 16) ?? 0x999999;
+    return Color((alpha << 24) | val);
+  }
+
   Widget _tipRow(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -228,4 +234,3 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     );
   }
 }
-
