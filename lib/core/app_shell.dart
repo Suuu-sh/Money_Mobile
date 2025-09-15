@@ -45,46 +45,40 @@ class _AppShellState extends State<AppShell> {
           child: Row(
             children: [
               Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _TabItem(
-                      icon: Icons.calendar_today_outlined,
-                      activeIcon: Icons.calendar_today,
-                      label: 'カレンダー',
-                      selected: _index == 0,
-                      onTap: () => setState(() => _index = 0),
-                    ),
-                    _TabItem(
-                      icon: Icons.bar_chart_outlined,
-                      activeIcon: Icons.bar_chart,
-                      label: 'レポート',
-                      selected: _index == 1,
-                      onTap: () => setState(() => _index = 1),
-                    ),
-                  ],
+                child: _TabItem(
+                  icon: Icons.calendar_today_outlined,
+                  activeIcon: Icons.calendar_today,
+                  label: 'カレンダー',
+                  selected: _index == 0,
+                  onTap: () => setState(() => _index = 0),
+                ),
+              ),
+              Expanded(
+                child: _TabItem(
+                  icon: Icons.bar_chart_outlined,
+                  activeIcon: Icons.bar_chart,
+                  label: 'レポート',
+                  selected: _index == 1,
+                  onTap: () => setState(() => _index = 1),
                 ),
               ),
               const SizedBox(width: 56),
               Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _TabItem(
-                      icon: Icons.insights_outlined,
-                      activeIcon: Icons.insights,
-                      label: '分析',
-                      selected: _index == 2,
-                      onTap: () => setState(() => _index = 2),
-                    ),
-                    _TabItem(
-                      icon: Icons.settings_outlined,
-                      activeIcon: Icons.settings,
-                      label: '設定',
-                      selected: _index == 3,
-                      onTap: () => setState(() => _index = 3),
-                    ),
-                  ],
+                child: _TabItem(
+                  icon: Icons.insights_outlined,
+                  activeIcon: Icons.insights,
+                  label: '分析',
+                  selected: _index == 2,
+                  onTap: () => setState(() => _index = 2),
+                ),
+              ),
+              Expanded(
+                child: _TabItem(
+                  icon: Icons.settings_outlined,
+                  activeIcon: Icons.settings,
+                  label: '設定',
+                  selected: _index == 3,
+                  onTap: () => setState(() => _index = 3),
                 ),
               ),
             ],
@@ -131,15 +125,17 @@ class _TabItem extends StatelessWidget {
     final color = selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant;
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(selected ? activeIcon : icon, color: color, size: 22),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(color: color, fontSize: 11)),
-          ],
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(selected ? activeIcon : icon, color: color, size: 22),
+              const SizedBox(height: 4),
+              Text(label, style: TextStyle(color: color, fontSize: 11)),
+            ],
+          ),
         ),
       ),
     );
