@@ -17,6 +17,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   List<MoneyTransaction> _transactions = [];
   bool _loading = true;
   static const _weekdays = ['月','火','水','木','金','土','日'];
+  DateTime? _selectedDate;
 
   @override
   void initState() {
@@ -36,7 +37,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
         endDate: _dateStr(end),
         pageSize: 200,
       );
-      setState(() => _transactions = list);
+      setState(() {
+        _transactions = list;
+        // keep selection inside the new month
+        _selectedDate ??= DateTime.now();
+        if (_selectedDate!.year != _currentMonth.year || _selectedDate!.month != _currentMonth.month) {
+          _selectedDate = start;
+        }
+      });
     } finally {
       setState(() => _loading = false);
     }
@@ -88,6 +96,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const Expanded(child: Center(child: CircularProgressIndicator()))
           else
             Expanded(child: _buildCalendarGrid()),
+
+          // Day transactions list
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              _selectedDate == null
+                  ? '取引'
+                  : DateFormat('yyyy/MM/dd（E）', 'ja').format(_selectedDate!),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildDayTransactionsList(),
         ],
       ),
     ),
@@ -118,16 +140,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final expense = dayTx.where((t) => t.type == 'expense').fold<double>(0, (s, t) => s + t.amount);
 
       return InkWell(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${DateFormat('MM/dd').format(date)} 収入:+${income.toStringAsFixed(0)} 支出:-${expense.toStringAsFixed(0)} (${dayTx.length}件)')),
-          );
-        },
+        onTap: () => setState(() => _selectedDate = date),
         child: Container(
           margin: const EdgeInsets.all(2),
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade200),
+            color: _isSameDay(_selectedDate, date) ? Colors.green.withOpacity(0.08) : null,
+            border: Border.all(
+              color: _isSameDay(_selectedDate, date) ? Colors.green : Colors.grey.shade200,
+            ),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
@@ -135,11 +156,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
             children: [
               Text('$dayNum', style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
-              if (income > 0)
-                Text('+${income.toStringAsFixed(0)}', style: TextStyle(color: Colors.green.shade700, fontSize: 12)),
+              // Show total daily expense prominently
               if (expense > 0)
-                Text('-${expense.toStringAsFixed(0)}', style: TextStyle(color: Colors.red.shade700, fontSize: 12)),
-              // keep compact when no data
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '-${expense.toStringAsFixed(0)}',
+                    style: TextStyle(color: Colors.red.shade700, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              if (expense == 0)
+                Text('—', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
             ],
           ),
         ),
@@ -149,6 +180,47 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return GridView.count(
       crossAxisCount: 7,
       children: cells,
+    );
+  }
+
+  bool _isSameDay(DateTime? a, DateTime b) {
+    if (a == null) return false;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Widget _buildDayTransactionsList() {
+    final date = _selectedDate;
+    if (date == null) {
+      return const SizedBox.shrink();
+    }
+    final items = _transactions.where((t) {
+      final d = t.date.toLocal();
+      return d.year == date.year && d.month == date.month && d.day == date.day;
+    }).toList();
+
+    if (items.isEmpty) {
+      return const Text('この日に記録された取引はありません', style: TextStyle(color: Colors.grey));
+    }
+    return SizedBox(
+      height: 160,
+      child: ListView.separated(
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const Divider(height: 0),
+        itemBuilder: (context, i) {
+          final t = items[i];
+          final sign = t.type == 'income' ? '+' : '-';
+          final color = t.type == 'income' ? Colors.green : Colors.red;
+          return ListTile(
+            dense: true,
+            title: Text(t.category?.name ?? '(カテゴリ不明)'),
+            subtitle: Text(t.description.isEmpty ? '' : t.description),
+            trailing: Text(
+              '$sign${t.amount.toStringAsFixed(0)}',
+              style: TextStyle(color: color, fontWeight: FontWeight.bold),
+            ),
+          );
+        },
+      ),
     );
   }
 }
