@@ -69,54 +69,62 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return SafeArea(
       top: true,
       bottom: false,
-      child: Padding(
-      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(onPressed: _prevMonth, icon: const Icon(Icons.chevron_left)),
-              Text(DateFormat('yyyy/MM').format(_currentMonth), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              IconButton(onPressed: _nextMonth, icon: const Icon(Icons.chevron_right)),
-            ],
+          // Header (with side padding)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(onPressed: _prevMonth, icon: const Icon(Icons.chevron_left)),
+                Text(DateFormat('yyyy/MM').format(_currentMonth), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                IconButton(onPressed: _nextMonth, icon: const Icon(Icons.chevron_right)),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          // Weekday header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: _weekdays
-                .map((label) => Expanded(child: Center(child: Text(label, style: const TextStyle(color: Colors.grey)))))
-                .toList(),
+          // Weekday header (with side padding)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: _weekdays
+                  .map((label) => Expanded(child: Center(child: Text(label, style: const TextStyle(color: Colors.grey)))))
+                  .toList(),
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
+          // Calendar grid (edge-to-edge)
           if (_loading)
             const Expanded(child: Center(child: CircularProgressIndicator()))
           else
-            Expanded(child: _buildCalendarGrid()),
+            Expanded(child: _buildCalendarGrid(edgeToEdge: true)),
 
-          // Day transactions list
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              _selectedDate == null
-                  ? '取引'
-                  : DateFormat('yyyy/MM/dd（E）', 'ja').format(_selectedDate!),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+          // Day transactions list (with side padding)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                _selectedDate == null
+                    ? '取引'
+                    : DateFormat('yyyy/MM/dd（E）', 'ja').format(_selectedDate!),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
           const SizedBox(height: 8),
-          _buildDayTransactionsList(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildDayTransactionsList(),
+          ),
         ],
       ),
-    ),
     );
   }
 
-  Widget _buildCalendarGrid() {
+  Widget _buildCalendarGrid({bool edgeToEdge = false}) {
     final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
 
@@ -142,14 +150,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return InkWell(
         onTap: () => setState(() => _selectedDate = date),
         child: Container(
-          margin: const EdgeInsets.all(2),
+          margin: edgeToEdge ? EdgeInsets.zero : const EdgeInsets.all(2),
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: _isSameDay(_selectedDate, date) ? Colors.green.withOpacity(0.08) : null,
+            color: _isSameDay(_selectedDate, date) ? Colors.green.withOpacity(0.06) : null,
             border: Border.all(
-              color: _isSameDay(_selectedDate, date) ? Colors.green : Colors.grey.shade200,
+              color: _isSameDay(_selectedDate, date) ? Colors.green : Colors.grey.shade300,
+              width: edgeToEdge ? 0.5 : 1,
             ),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: edgeToEdge ? BorderRadius.zero : BorderRadius.circular(8),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,9 +190,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return GridView.count(
       crossAxisCount: 7,
-      childAspectRatio: 0.85, // give a bit more vertical room to avoid overflow
-      mainAxisSpacing: 4,
-      crossAxisSpacing: 4,
+      childAspectRatio: 0.95,
+      mainAxisSpacing: edgeToEdge ? 0 : 4,
+      crossAxisSpacing: edgeToEdge ? 0 : 4,
+      padding: EdgeInsets.zero,
       physics: const ClampingScrollPhysics(),
       children: cells,
     );
