@@ -146,13 +146,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               const SizedBox(height: 12),
 
-              // 円グラフ1: 月の総計（支出/収入）
+              // 今月の総計（数字表示）
               _card(
-                title: '今月の総計（支出/収入）',
-                centerText: '支出 ${s.thisMonthExpense.toStringAsFixed(0)}',
-                child: SizedBox(
-                  height: 160,
-                  child: PieChart(PieChartData(sections: expVsIncome, sectionsSpace: 0, centerSpaceRadius: 42)),
+                title: '今月の総計',
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(child: _metric('収入', nf.format(s.thisMonthIncome), Colors.green)),
+                      Expanded(child: _metric('支出', nf.format(s.thisMonthExpense), Colors.red)),
+                      Expanded(child: _metric('収支', nf.format(s.thisMonthIncome - s.thisMonthExpense), (s.thisMonthIncome - s.thisMonthExpense) >= 0 ? Colors.green : Colors.red)),
+                    ],
+                  ),
                 ),
               ),
 
@@ -239,6 +244,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _metric(String label, String value, Color color) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: theme.textTheme.headlineSmall?.copyWith(color: color, fontWeight: FontWeight.w700),
+        ),
+      ],
     );
   }
 }
