@@ -16,14 +16,18 @@ class ReportsScreen extends StatefulWidget {
   State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
+enum _ViewKind { expense, income }
+
 class _ReportsScreenState extends State<ReportsScreen> {
   final _statsRepo = StatsRepository(ApiClient());
   final _txRepo = TransactionsRepository(ApiClient());
   final _catRepo = CategoriesRepository(ApiClient());
   Future<Stats>? _future;
-  List<MoneyTransaction> _monthExpenses = [];
+  List<MoneyTransaction> _monthTx = [];
   Map<int, Category> _categoryMap = {};
   DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  _ViewKind _view = _ViewKind.expense;
+  int? _touchedIndex;
 
   @override
   void initState() {
@@ -40,13 +44,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final txs = await _txRepo.list(
       startDate: _dateStr(start),
       endDate: _dateStr(end),
-      type: 'expense',
-      pageSize: 500,
+      pageSize: 1000,
     );
     final cats = await _catRepo.list();
     if (!mounted) return;
     setState(() {
-      _monthExpenses = txs;
+      _monthTx = txs;
       _categoryMap = {for (final c in cats) c.id: c};
     });
   }
@@ -69,20 +72,39 @@ class _ReportsScreenState extends State<ReportsScreen> {
           return Center(child: Text('読み込みエラー: ${snapshot.error}'));
         }
         final s = snapshot.data!;
-        // Aggregate by category (expense only)
+        // Aggregate by category (current view)
         final byCategory = <int, double>{};
-        for (final t in _monthExpenses) {
+        for (final t in _monthTx.where((t) => (_view == _ViewKind.expense ? t.type == 'expense' : t.type == 'income'))) {
           byCategory[t.categoryId] = (byCategory[t.categoryId] ?? 0) + t.amount;
         }
-        final totalExpense = byCategory.values.fold<double>(0, (sum, v) => sum + v);
+        final totalSelected = byCategory.values.fold<double>(0, (sum, v) => sum + v);
 
         final sections = <PieChartSectionData>[];
-        byCategory.forEach((id, amount) {
+        final nf = NumberFormat('#,##0', 'ja_JP');
+        final entries = byCategory.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+        for (var i = 0; i < entries.length; i++) {
+          final id = entries[i].key;
+          final amount = entries[i].value;
           if (amount <= 0) return;
           final c = _categoryMap[id];
           final color = c != null ? _parseHex(c.color) : Colors.blueGrey;
-          sections.add(PieChartSectionData(color: color, value: amount, title: '', radius: 44));
-        });
+          final isTouched = _touchedIndex == i;
+          final percent = totalSelected == 0 ? 0 : (amount / totalSelected * 100);
+          sections.add(
+            PieChartSectionData(
+              color: color,
+              value: amount,
+              radius: isTouched ? 52 : 44,
+              title: percent >= 5 ? '${percent.toStringAsFixed(0)}%' : '',
+              titleStyle: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                fontSize: isTouched ? 12 : 10,
+                fontWeight: FontWeight.w600,
+              ),
+              titlePositionPercentageOffset: 0.6,
+            ),
+          );
+        }
 
         // Monthly total pie (expense vs income)
         final expVsIncome = [
@@ -97,7 +119,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
           padding: const EdgeInsets.all(16),
           child: ListView(
             children: [
-              const Text('レポート', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              // Month selector + toggle
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(onPressed: () { setState(() { _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1); }); _loadDetails(); }, icon: const Icon(Icons.chevron_left)),
+                  Text(DateFormat('yyyy/MM').format(_currentMonth), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  IconButton(onPressed: () { setState(() { _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1); }); _loadDetails(); }, icon: const Icon(Icons.chevron_right)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('支出'),
+                    selected: _view == _ViewKind.expense,
+                    onSelected: (_) => setState(() { _view = _ViewKind.expense; _touchedIndex = null; }),
+                  ),
+                  ChoiceChip(
+                    label: const Text('収入'),
+                    selected: _view == _ViewKind.income,
+                    onSelected: (_) => setState(() { _view = _ViewKind.income; _touchedIndex = null; }),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
 
               // 円グラフ1: 月の総計（支出/収入）
@@ -114,13 +160,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               // 円グラフ2: カテゴリ別の合計（支出）
               _card(
-                title: 'カテゴリ別支出',
-                centerText: '合計 ${totalExpense.toStringAsFixed(0)}',
+                title: _view == _ViewKind.expense ? 'カテゴリ別支出' : 'カテゴリ別収入',
+                centerText: '合計 ${nf.format(totalSelected)}',
                 child: Column(
                   children: [
                     SizedBox(
                       height: 180,
-                      child: PieChart(PieChartData(sections: sections, sectionsSpace: 0, centerSpaceRadius: 40)),
+                      child: PieChart(
+                        PieChartData(
+                          sections: sections,
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 40,
+                          pieTouchData: PieTouchData(
+                            touchCallback: (event, response) {
+                              if (!event.isInterestedForInteractions || response == null || response.touchedSection == null) {
+                                setState(() => _touchedIndex = null);
+                              } else {
+                                setState(() => _touchedIndex = response.touchedSection!.touchedSectionIndex);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     _legend(byCategory),
