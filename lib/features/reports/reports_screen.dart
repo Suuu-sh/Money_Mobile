@@ -10,6 +10,8 @@ import 'package:money_tracker_mobile/models/transaction.dart';
 import 'package:money_tracker_mobile/features/fixed_expenses/fixed_expenses_repository.dart';
 import 'package:money_tracker_mobile/models/fixed_expense.dart';
 import 'package:money_tracker_mobile/models/category.dart';
+import 'package:money_tracker_mobile/features/budgets/category_budgets_repository.dart';
+import 'package:money_tracker_mobile/models/category_budget.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
