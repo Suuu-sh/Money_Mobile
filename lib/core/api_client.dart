@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import 'config.dart';
 import 'token_store.dart';
+import 'mock_server.dart';
 
 /// Simple HTTP client with JSON helpers and optional auth header support.
 class ApiClient {
@@ -31,11 +32,17 @@ class ApiClient {
   }
 
   Future<dynamic> getJson(String path, {Map<String, String>? query}) async {
+    if (AppConfig.useMock) {
+      return MockServer().handleGet(path, query: query);
+    }
     final res = await _client.get(_uri(path, query), headers: await _headers());
     return _parse(res);
   }
 
   Future<dynamic> postJson(String path, Object body) async {
+    if (AppConfig.useMock) {
+      return MockServer().handlePost(path, body as Map<String, dynamic>);
+    }
     final res = await _client.post(
       _uri(path),
       headers: await _headers(),
@@ -45,6 +52,9 @@ class ApiClient {
   }
 
   Future<dynamic> putJson(String path, Object body) async {
+    if (AppConfig.useMock) {
+      return MockServer().handlePut(path, body as Map<String, dynamic>);
+    }
     final res = await _client.put(
       _uri(path),
       headers: await _headers(),
@@ -54,6 +64,10 @@ class ApiClient {
   }
 
   Future<void> delete(String path) async {
+    if (AppConfig.useMock) {
+      MockServer().handleDelete(path);
+      return;
+    }
     final res = await _client.delete(
       _uri(path),
       headers: await _headers(),

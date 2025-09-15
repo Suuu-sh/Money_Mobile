@@ -8,5 +8,11 @@ class AppConfig {
     'API_BASE_URL',
     defaultValue: 'http://localhost:8080/api',
   );
-}
 
+  // Use mock data instead of real backend during testing.
+  // Set with: --dart-define=USE_MOCK=false to disable.
+  static const bool useMock = bool.fromEnvironment(
+    'USE_MOCK',
+    defaultValue: false,
+  );
+}
