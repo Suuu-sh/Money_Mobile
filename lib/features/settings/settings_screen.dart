@@ -3,6 +3,7 @@ import 'package:money_tracker_mobile/core/app_state.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/auth/auth_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class SettingsScreen extends StatelessWidget {
   SettingsScreen({super.key});
@@ -43,6 +44,109 @@ class SettingsScreen extends StatelessWidget {
                 ],
               );
             },
+          ),
+
+          const SizedBox(height: 16),
+          // App settings
+          const Text('アプリ設定', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          FutureBuilder<SharedPreferences>(
+            future: SharedPreferences.getInstance(),
+            builder: (context, snap) {
+              final prefs = snap.data;
+              final startMonday = prefs?.getBool('startMonday') ?? true;
+              final currency = prefs?.getString('currency') ?? 'JPY';
+              return Column(
+                children: [
+                  // First day of week
+                  Row(
+                    children: [
+                      const Text('週の開始曜日'),
+                      const Spacer(),
+                      ChoiceChip(
+                        label: const Text('月'),
+                        selected: startMonday,
+                        onSelected: (_) async { final p = await SharedPreferences.getInstance(); await p.setBool('startMonday', true); setState(() {}); },
+                      ),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: const Text('日'),
+                        selected: !startMonday,
+                        onSelected: (_) async { final p = await SharedPreferences.getInstance(); await p.setBool('startMonday', false); setState(() {}); },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Currency
+                  Row(
+                    children: [
+                      const Text('通貨'),
+                      const Spacer(),
+                      DropdownButton<String>(
+                        value: currency,
+                        items: const [
+                          DropdownMenuItem(value: 'JPY', child: Text('JPY')),
+                          DropdownMenuItem(value: 'USD', child: Text('USD')),
+                          DropdownMenuItem(value: 'EUR', child: Text('EUR')),
+                        ],
+                        onChanged: (v) async { final p = await SharedPreferences.getInstance(); await p.setString('currency', v ?? 'JPY'); setState(() {}); },
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+
+          const SizedBox(height: 16),
+          // Data management
+          const Text('データ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              OutlinedButton(
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  final map = <String, dynamic>{};
+                  for (final k in ['themeMode', 'startMonday', 'currency']) {
+                    if (prefs.containsKey(k)) map[k] = prefs.get(k);
+                  }
+                  final jsonText = const JsonEncoder.withIndent('  ').convert(map);
+                  if (context.mounted) {
+                    showDialog(context: context, builder: (_) => AlertDialog(title: const Text('設定をエクスポート'), content: SingleChildScrollView(child: SelectableText(jsonText)), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('閉じる'))]));
+                  }
+                },
+                child: const Text('設定をエクスポート'),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton(
+                onPressed: () async {
+                  final controller = TextEditingController();
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('設定をインポート'),
+                      content: TextField(controller: controller, maxLines: 8, decoration: const InputDecoration(hintText: '{\n  "themeMode": "dark"\n}')),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
+                        TextButton(onPressed: () async {
+                          try {
+                            final data = jsonDecode(controller.text) as Map<String, dynamic>;
+                            final prefs = await SharedPreferences.getInstance();
+                            if (data.containsKey('themeMode')) await prefs.setString('themeMode', data['themeMode'] as String);
+                            if (data.containsKey('startMonday')) await prefs.setBool('startMonday', data['startMonday'] as bool);
+                            if (data.containsKey('currency')) await prefs.setString('currency', data['currency'] as String);
+                            if (context.mounted) Navigator.pop(context);
+                          } catch (_) { if (context.mounted) Navigator.pop(context); }
+                          if (context.mounted) setState(() {});
+                        }, child: const Text('読み込み')),
+                      ],
+                    ),
+                  );
+                },
+                child: const Text('設定をインポート'),
+              ),
+            ],
           ),
 
           const Spacer(),

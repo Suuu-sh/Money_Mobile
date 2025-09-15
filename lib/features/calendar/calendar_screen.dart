@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
 // import removed: input is opened from global FAB
@@ -19,14 +20,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _loading = true;
   static const _weekdays = ['月','火','水','木','金','土','日'];
   DateTime? _selectedDate;
+  bool _startMonday = true;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadPrefs();
   }
 
   String _dateStr(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() => _startMonday = prefs.getBool('startMonday') ?? true);
+  }
 
   Future<void> _load() async {
     setState(() => _loading = true);
@@ -94,7 +102,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           // Weekday header (edge-to-edge)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: _weekdays
+            children: (_startMonday ? _weekdays : ['日','月','火','水','木','金','土'])
                 .map((label) => Expanded(child: Center(child: Text(label, style: weekdayStyle))))
                 .toList(),
           ),
@@ -146,7 +154,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
 
     // Monday-first weekday index (Mon=0..Sun=6)
-    final firstWeekday = (firstDay.weekday + 6) % 7;
+    final firstWeekday = _startMonday ? ((firstDay.weekday + 6) % 7) : (firstDay.weekday % 7);
     final daysInMonth = lastDay.day;
     final totalCells = ((firstWeekday + daysInMonth + 6) ~/ 7) * 7; // round up to full weeks
 
