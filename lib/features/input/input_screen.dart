@@ -72,9 +72,10 @@ class _InputScreenState extends State<InputScreen> {
         _amountController.clear();
         _descController.clear();
       });
-      // クイック入力用途では追加後に閉じる
+      // クイック入力用途では追加後に閉じる + 通知
+      AppState.instance.bumpDataVersion();
       if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       setState(() => _message = '取引の作成に失敗しました');

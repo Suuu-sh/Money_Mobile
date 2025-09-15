@@ -198,7 +198,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               // 円グラフ2: カテゴリ別の合計（支出）
               _card(
                 title: _view == _ViewKind.expense ? 'カテゴリ別支出' : 'カテゴリ別収入',
-                centerText: '合計 ${nf.format(totalSelected)}',
+                centerText: '合計 ${nf.format(totalSelected)}円',
                 child: Column(
                   children: [
                     SizedBox(
@@ -271,7 +271,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
               const SizedBox(width: 8),
               Expanded(child: Text(name)),
-              Text(e.value.toStringAsFixed(0), style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('${e.value.toStringAsFixed(0)}円', style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
         );
@@ -287,7 +287,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
         const SizedBox(height: 4),
         Text(
-          value,
+          '$value円',
           style: theme.textTheme.headlineSmall?.copyWith(color: color, fontWeight: FontWeight.w700),
         ),
       ],

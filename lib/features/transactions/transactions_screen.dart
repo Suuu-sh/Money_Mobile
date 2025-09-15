@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
+import 'package:money_tracker_mobile/core/app_state.dart';
+import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/features/transactions/transaction_edit_sheet.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -14,15 +16,24 @@ class TransactionsScreen extends StatefulWidget {
 class _TransactionsScreenState extends State<TransactionsScreen> {
   final _repo = TransactionsRepository(ApiClient());
   late Future<List<MoneyTransaction>> _future;
+  late final VoidCallback _listener;
 
   @override
   void initState() {
     super.initState();
     _future = _repo.list();
+    _listener = () { setState(() { _future = _repo.list(); }); };
+    AppState.instance.dataVersion.addListener(_listener);
   }
 
   Future<void> _refresh() async {
     setState(() => _future = _repo.list());
+  }
+
+  @override
+  void dispose() {
+    AppState.instance.dataVersion.removeListener(_listener);
+    super.dispose();
   }
 
   @override
@@ -50,12 +61,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 final t = items[i];
                 final sign = t.type == 'income' ? '+' : '-';
                 final color = t.type == 'income' ? Colors.green : Colors.red;
+                final nf = NumberFormat('#,##0', 'ja_JP');
                 return ListTile(
                   title: Text(t.category?.name ?? '(カテゴリ不明)'),
                   subtitle: Text(t.description.isEmpty ? t.date.toIso8601String().substring(0, 10) : t.description),
                   trailing: Text(
-                    '$sign${t.amount.toStringAsFixed(0)}',
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18),
+                    '$sign${nf.format(t.amount)}円',
+                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   onTap: () async {
                     final updated = await showModalBottomSheet<bool>(

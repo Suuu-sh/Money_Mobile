@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
+import 'package:money_tracker_mobile/core/app_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
@@ -28,6 +29,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.initState();
     _load();
     _loadPrefs();
+    AppState.instance.dataVersion.addListener(_onDataChanged);
   }
 
   String _dateStr(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
@@ -72,6 +74,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
     });
     _load();
+  }
+
+  void _onDataChanged() {
+    // reload current month data when something changed elsewhere
+    _load();
+  }
+
+  @override
+  void dispose() {
+    AppState.instance.dataVersion.removeListener(_onDataChanged);
+    super.dispose();
   }
 
   @override
@@ -237,7 +250,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    income.toStringAsFixed(0),
+                    '${income.toStringAsFixed(0)}円',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.green.shade300 : Colors.green.shade700, fontSize: 9, fontWeight: FontWeight.w600),
@@ -253,7 +266,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      expense.toStringAsFixed(0),
+                      '${expense.toStringAsFixed(0)}円',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.red.shade300 : Colors.red.shade700, fontSize: 9, fontWeight: FontWeight.w600),
@@ -302,7 +315,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         children: [
           Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
           const SizedBox(height: 2),
-          Text(value, style: theme.textTheme.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text('$value円', style: theme.textTheme.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700)),
         ],
       );
     }
@@ -334,6 +347,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (items.isEmpty) {
       return const Text('この日に記録された取引はありません', style: TextStyle(color: Colors.grey));
     }
+    final nf = NumberFormat('#,##0', 'ja_JP');
     return SizedBox(
       height: 160,
       child: ListView.separated(
@@ -348,8 +362,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             title: Text(t.category?.name ?? '(カテゴリ不明)'),
             subtitle: Text(t.description.isEmpty ? '' : t.description),
             trailing: Text(
-              '$sign${t.amount.toStringAsFixed(0)}',
-              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18),
+              '$sign${nf.format(t.amount)}円',
+              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
             ),
             onTap: () async {
               final updated = await _openEditTransaction(t);

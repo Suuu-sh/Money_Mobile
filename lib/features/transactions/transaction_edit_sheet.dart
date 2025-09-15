@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
+import 'package:money_tracker_mobile/core/app_state.dart';
 import 'package:money_tracker_mobile/features/categories/categories_repository.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/models/category.dart';
@@ -141,7 +142,10 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
         description: _desc.text.trim(),
         date: _date,
       );
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        AppState.instance.bumpDataVersion();
+        Navigator.pop(context, true);
+      }
     } catch (_) {
       if (mounted) Navigator.pop(context, false);
     } finally {
@@ -149,4 +153,3 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
     }
   }
 }
-
