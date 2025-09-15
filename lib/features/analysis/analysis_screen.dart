@@ -76,21 +76,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     }
     final topCats = byCat.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
 
-    final last7Start = now.subtract(const Duration(days: 6));
-    final last7 = _monthTx.where((t) {
-      final d = DateTime.parse(t.date.toIso8601String().substring(0, 10));
-      return d.isAfter(last7Start.subtract(const Duration(days: 1))) && d.isBefore(now.add(const Duration(days: 1)));
-    }).toList();
-    final last7Expense = last7.where((t) => t.type == 'expense').fold<double>(0, (s0, t) => s0 + t.amount);
-
-    final prev7Start = last7Start.subtract(const Duration(days: 7));
-    final prev7End = last7Start.subtract(const Duration(days: 1));
-    final prev7 = _monthTx.where((t) {
-      final d = DateTime.parse(t.date.toIso8601String().substring(0, 10));
-      return d.isAfter(prev7Start.subtract(const Duration(days: 1))) && d.isBefore(prev7End.add(const Duration(days: 1)));
-    }).toList();
-    final prev7Expense = prev7.where((t) => t.type == 'expense').fold<double>(0, (s0, t) => s0 + t.amount);
-    final weekDelta = last7Expense - prev7Expense;
+    // 直近比較などの追加分析はここに拡張可能
 
     return SafeArea(
       top: true,
@@ -159,27 +145,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               ),
             ),
 
-            const SizedBox(height: 12),
-            _card(
-              title: '節約のヒント',
-              child: Builder(builder: (context) {
-                final tips = <String>[];
-                if (avgPerDay > 0 && forecastExpense > s.thisMonthIncome) {
-                  tips.add('このペースだと収入を超える見込みです。外食・サブスクを見直しましょう。');
-                }
-                if (topCats.isNotEmpty) {
-                  final top = _catMap[topCats.first.key]?.name ?? '特定カテゴリ';
-                  tips.add('「$top」の支出が目立ちます。週あたりの上限を決めて使い過ぎを防ぎましょう。');
-                }
-                if (weekDelta > 0) {
-                  tips.add('直近1週間の支出が先週より増えています（+${nf.format(weekDelta)}）。小さな固定費の見直しが効果的です。');
-                } else if (weekDelta < 0) {
-                  tips.add('直近1週間の支出は先週比で減少（${nf.format(weekDelta.abs())}節約）。この調子！');
-                }
-                if (tips.isEmpty) tips.add('支出は安定しています。まとめ買いやキャッシュレス還元の活用で更に効率化できます。');
-                return Column(children: tips.map((t) => _tipRow(t)).toList());
-              }),
-            ),
+            // ヒントカードは削除
           ],
         ),
       ),
@@ -220,17 +186,4 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     return Color((alpha << 24) | val);
   }
 
-  Widget _tipRow(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.lightbulb_outline, size: 18, color: Colors.amber),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text)),
-        ],
-      ),
-    );
-  }
 }
