@@ -7,6 +7,8 @@ import 'package:money_tracker_mobile/features/transactions/transactions_reposito
 import 'package:money_tracker_mobile/features/categories/categories_repository.dart';
 import 'package:money_tracker_mobile/models/stats.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
+import 'package:money_tracker_mobile/features/fixed_expenses/fixed_expenses_repository.dart';
+import 'package:money_tracker_mobile/models/fixed_expense.dart';
 import 'package:money_tracker_mobile/models/category.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -21,9 +23,11 @@ enum _ViewKind { expense, income }
 class _ReportsScreenState extends State<ReportsScreen> {
   final _statsRepo = StatsRepository(ApiClient());
   final _txRepo = TransactionsRepository(ApiClient());
+  final _fixRepo = FixedExpensesRepository(ApiClient());
   final _catRepo = CategoriesRepository(ApiClient());
   Future<Stats>? _future;
   List<MoneyTransaction> _monthTx = [];
+  List<FixedExpense> _fixed = [];
   Map<int, Category> _categoryMap = {};
   DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
   _ViewKind _view = _ViewKind.expense;
@@ -47,10 +51,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
       pageSize: 1000,
     );
     final cats = await _catRepo.list();
+    // 固定費も読み込む
+    List<FixedExpense> fixed = [];
+    try {
+      fixed = await _fixRepo.list();
+    } catch (_) {}
     if (!mounted) return;
     setState(() {
       _monthTx = txs;
       _categoryMap = {for (final c in cats) c.id: c};
+      _fixed = fixed;
     });
   }
 
@@ -146,7 +156,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               const SizedBox(height: 12),
 
-              // 今月の総計（数字表示）
+              // 今月の総計（数字表示）- 固定費込み
               _card(
                 title: '今月の総計',
                 child: Padding(
@@ -154,8 +164,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: Row(
                     children: [
                       Expanded(child: _metric('収入', nf.format(s.thisMonthIncome), Colors.green)),
-                      Expanded(child: _metric('支出', nf.format(s.thisMonthExpense), Colors.red)),
-                      Expanded(child: _metric('収支', nf.format(s.thisMonthIncome - s.thisMonthExpense), (s.thisMonthIncome - s.thisMonthExpense) >= 0 ? Colors.green : Colors.red)),
+                      Expanded(child: _metric('支出（固定費込）', nf.format(s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount)), Colors.red)),
+                      Expanded(child: _metric('収支', nf.format(s.thisMonthIncome - (s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount))), (s.thisMonthIncome - (s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount))) >= 0 ? Colors.green : Colors.red)),
                     ],
                   ),
                 ),
