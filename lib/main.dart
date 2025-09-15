@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:money_tracker_mobile/core/app_shell.dart';
 import 'package:money_tracker_mobile/core/app_state.dart';
 // Login screen is disabled during testing
@@ -6,8 +7,12 @@ import 'package:money_tracker_mobile/core/token_store.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/auth/auth_repository.dart';
 import 'package:money_tracker_mobile/models/user.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize intl date symbols for Japanese (used by DateFormat('E'), etc.)
+  await initializeDateFormatting('ja');
   runApp(const MoneyTrackerApp());
 }
 
@@ -51,6 +56,14 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF22C55E)),
         useMaterial3: true,
       ),
+      // Japanese UI + date symbols
+      locale: const Locale('ja'),
+      supportedLocales: const [Locale('ja'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const AppShell(),
     );
   }
