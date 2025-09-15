@@ -281,17 +281,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (t.type == 'expense') expense += t.amount;
     }
     final net = income - expense;
-    final color = net >= 0 ? Colors.green : Colors.red;
     final nf = NumberFormat('#,##0', 'ja_JP');
+
+    Widget metric(String label, String value, Color color) {
+      final theme = Theme.of(context);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
+          const SizedBox(height: 2),
+          Text(value, style: theme.textTheme.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700)),
+        ],
+      );
+    }
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: [
-            const Text('今月の総収支', style: TextStyle(fontWeight: FontWeight.w600)),
-            const Spacer(),
-            Text(nf.format(net), style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 16)),
+            Expanded(child: metric('収入', nf.format(income), Colors.green)),
+            Expanded(child: metric('支出', nf.format(expense), Colors.red)),
+            Expanded(child: metric('総収支', nf.format(net), net >= 0 ? Colors.green : Colors.red)),
           ],
         ),
       ),
