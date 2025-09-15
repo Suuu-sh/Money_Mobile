@@ -3,6 +3,7 @@ import 'package:money_tracker_mobile/features/analysis/analysis_screen.dart';
 import 'package:money_tracker_mobile/features/calendar/calendar_screen.dart';
 import 'package:money_tracker_mobile/features/reports/reports_screen.dart';
 import 'package:money_tracker_mobile/features/settings/settings_screen.dart';
+import 'package:money_tracker_mobile/features/input/input_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -30,15 +31,101 @@ class _AppShellState extends State<AppShell> {
           SettingsScreen(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.calendar_today_outlined), selectedIcon: Icon(Icons.calendar_today), label: 'カレンダー'),
-          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'レポート'),
-          NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: '分析'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: '設定'),
-        ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openQuickInput,
+        child: const Icon(Icons.add),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _TabItem(
+                icon: Icons.calendar_today_outlined,
+                activeIcon: Icons.calendar_today,
+                label: 'カレンダー',
+                selected: _index == 0,
+                onTap: () => setState(() => _index = 0),
+              ),
+              _TabItem(
+                icon: Icons.bar_chart_outlined,
+                activeIcon: Icons.bar_chart,
+                label: 'レポート',
+                selected: _index == 1,
+                onTap: () => setState(() => _index = 1),
+              ),
+              const SizedBox(width: 48), // space for FAB notch
+              _TabItem(
+                icon: Icons.insights_outlined,
+                activeIcon: Icons.insights,
+                label: '分析',
+                selected: _index == 2,
+                onTap: () => setState(() => _index = 2),
+              ),
+              _TabItem(
+                icon: Icons.settings_outlined,
+                activeIcon: Icons.settings,
+                label: '設定',
+                selected: _index == 3,
+                onTap: () => setState(() => _index = 3),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openQuickInput() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: SizedBox(
+            height: MediaQuery.of(ctx).size.height * 0.8,
+            child: InputScreen(initialDate: DateTime.now()),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TabItem extends StatelessWidget {
+  const _TabItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(selected ? activeIcon : icon, color: color, size: 22),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(color: color, fontSize: 11)),
+          ],
+        ),
       ),
     );
   }
