@@ -113,7 +113,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   const SizedBox(height: 6),
                   _metric('予測収支', nf.format(forecastBalance), forecastBalance >= 0 ? Colors.green : Colors.red),
                   const SizedBox(height: 6),
-                  Text('平均: ${nf.format(avgPerDay)} /日・残り${(totalDays - passed).clamp(0, totalDays)}日'),
+                  Text('平均: ${nf.format(avgPerDay)}円/日・残り${(totalDays - passed).clamp(0, totalDays)}日'),
                 ],
               ),
             ),
@@ -135,7 +135,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                           Container(width: 10, height: 10, decoration: BoxDecoration(color: _parseHex(cat?.color ?? '#999999'), shape: BoxShape.circle)),
                           const SizedBox(width: 8),
                           Expanded(child: Text(name)),
-                          Text('${nf.format(e.value)}（${percent.toStringAsFixed(0)}%）', style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text('${nf.format(e.value)}円（${percent.toStringAsFixed(0)}%）', style: const TextStyle(fontWeight: FontWeight.w600)),
                         ],
                       ),
                     );

@@ -10,6 +10,8 @@ import 'package:money_tracker_mobile/models/transaction.dart';
 import 'package:money_tracker_mobile/features/fixed_expenses/fixed_expenses_repository.dart';
 import 'package:money_tracker_mobile/models/fixed_expense.dart';
 import 'package:money_tracker_mobile/models/category.dart';
+import 'package:money_tracker_mobile/features/budgets/category_budgets_repository.dart';
+import 'package:money_tracker_mobile/models/category_budget.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -18,17 +20,19 @@ class ReportsScreen extends StatefulWidget {
   State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-enum _ViewKind { expense, income }
+enum _ViewKind { expense, income, budget }
 
 class _ReportsScreenState extends State<ReportsScreen> {
   final _statsRepo = StatsRepository(ApiClient());
   final _txRepo = TransactionsRepository(ApiClient());
   final _fixRepo = FixedExpensesRepository(ApiClient());
   final _catRepo = CategoriesRepository(ApiClient());
+  final _budRepo = CategoryBudgetsRepository(ApiClient());
   Future<Stats>? _future;
   List<MoneyTransaction> _monthTx = [];
   List<FixedExpense> _fixed = [];
   Map<int, Category> _categoryMap = {};
+  List<CategoryBudget> _budgets = [];
   DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
   _ViewKind _view = _ViewKind.expense;
   int? _touchedIndex;
@@ -56,11 +60,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
     try {
       fixed = await _fixRepo.list();
     } catch (_) {}
+    // カテゴリ予算
+    List<CategoryBudget> budgets = [];
+    try {
+      budgets = await _budRepo.listByMonth(_currentMonth);
+    } catch (_) {}
     if (!mounted) return;
     setState(() {
       _monthTx = txs;
       _categoryMap = {for (final c in cats) c.id: c};
       _fixed = fixed;
+      _budgets = budgets;
     });
   }
 
@@ -152,6 +162,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     selected: _view == _ViewKind.income,
                     onSelected: (_) => setState(() { _view = _ViewKind.income; _touchedIndex = null; }),
                   ),
+                  ChoiceChip(
+                    label: const Text('予算'),
+                    selected: _view == _ViewKind.budget,
+                    onSelected: (_) => setState(() { _view = _ViewKind.budget; _touchedIndex = null; }),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -195,36 +210,41 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               const SizedBox(height: 16),
 
-              // 円グラフ2: カテゴリ別の合計（支出）
-              _card(
-                title: _view == _ViewKind.expense ? 'カテゴリ別支出' : 'カテゴリ別収入',
-                centerText: '合計 ${nf.format(totalSelected)}',
-                child: Column(
-                  children: [
-                    SizedBox(
-                      height: 180,
-                      child: PieChart(
-                        PieChartData(
-                          sections: sections,
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 40,
-                          pieTouchData: PieTouchData(
-                            touchCallback: (event, response) {
-                              if (!event.isInterestedForInteractions || response == null || response.touchedSection == null) {
-                                setState(() => _touchedIndex = null);
-                              } else {
-                                setState(() => _touchedIndex = response.touchedSection!.touchedSectionIndex);
-                              }
-                            },
+              if (_view == _ViewKind.budget)
+                _card(
+                  title: 'カテゴリ別予算',
+                  child: _budgetList(nf),
+                )
+              else
+                _card(
+                  title: _view == _ViewKind.expense ? 'カテゴリ別支出' : 'カテゴリ別収入',
+                  centerText: '合計 ${nf.format(totalSelected)}円',
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 180,
+                        child: PieChart(
+                          PieChartData(
+                            sections: sections,
+                            sectionsSpace: 2,
+                            centerSpaceRadius: 40,
+                            pieTouchData: PieTouchData(
+                              touchCallback: (event, response) {
+                                if (!event.isInterestedForInteractions || response == null || response.touchedSection == null) {
+                                  setState(() => _touchedIndex = null);
+                                } else {
+                                  setState(() => _touchedIndex = response.touchedSection!.touchedSectionIndex);
+                                }
+                              },
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    _legend(byCategory),
-                  ],
+                      const SizedBox(height: 8),
+                      _legend(byCategory),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -271,7 +291,49 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
               const SizedBox(width: 8),
               Expanded(child: Text(name)),
-              Text(e.value.toStringAsFixed(0), style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('${e.value.toStringAsFixed(0)}円', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _budgetList(NumberFormat nf) {
+    if (_budgets.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text('予算データがありません', style: TextStyle(color: Colors.grey)),
+      );
+    }
+    return Column(
+      children: _budgets.map((b) {
+        final spent = b.actualAmount;
+        final budget = b.budgetAmount;
+        final pct = budget <= 0 ? 0.0 : (spent / budget).clamp(0.0, 1.0);
+        final over = spent > budget;
+        final barColor = over ? Colors.red : Colors.green;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text(b.categoryName, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  Text('${nf.format(spent)}円 / ${nf.format(budget)}円', style: const TextStyle(fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: pct,
+                  minHeight: 8,
+                  color: barColor,
+                  backgroundColor: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
+                ),
+              ),
             ],
           ),
         );
@@ -287,7 +349,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
         const SizedBox(height: 4),
         Text(
-          value,
+          '$value円',
           style: theme.textTheme.headlineSmall?.copyWith(color: color, fontWeight: FontWeight.w700),
         ),
       ],

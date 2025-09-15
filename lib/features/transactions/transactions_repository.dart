@@ -1,4 +1,5 @@
 import 'package:money_tracker_mobile/core/api_client.dart';
+import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
 
 class TransactionsRepository {
@@ -30,12 +31,13 @@ class TransactionsRepository {
     String? description,
     required DateTime date,
   }) async {
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
     final res = await _api.postJson('/transactions', {
       'type': type,
       'amount': amount,
       'categoryId': categoryId,
       'description': description ?? '',
-      'date': date.toIso8601String(),
+      'date': dateStr,
     });
     return MoneyTransaction.fromJson(res as Map<String, dynamic>);
   }
@@ -52,7 +54,7 @@ class TransactionsRepository {
     if (amount != null) body['amount'] = amount;
     if (categoryId != null) body['categoryId'] = categoryId;
     if (description != null) body['description'] = description;
-    if (date != null) body['date'] = date.toIso8601String();
+    if (date != null) body['date'] = DateFormat('yyyy-MM-dd').format(date);
     final res = await _api.putJson('/transactions/$id', body);
     return MoneyTransaction.fromJson(res as Map<String, dynamic>);
   }
@@ -61,4 +63,3 @@ class TransactionsRepository {
     await _api.delete('/transactions/$id');
   }
 }
-

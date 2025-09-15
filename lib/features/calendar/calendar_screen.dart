@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
+import 'package:money_tracker_mobile/core/app_state.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
+import 'package:money_tracker_mobile/features/transactions/transaction_edit_sheet.dart';
 // import removed: input is opened from global FAB
 
 class CalendarScreen extends StatefulWidget {
@@ -19,14 +22,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _loading = true;
   static const _weekdays = ['月','火','水','木','金','土','日'];
   DateTime? _selectedDate;
+  bool _startMonday = true;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadPrefs();
+    AppState.instance.dataVersion.addListener(_onDataChanged);
   }
 
   String _dateStr(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() => _startMonday = prefs.getBool('startMonday') ?? true);
+  }
 
   Future<void> _load() async {
     setState(() => _loading = true);
@@ -65,15 +76,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _load();
   }
 
+  void _onDataChanged() {
+    // reload current month data when something changed elsewhere
+    _load();
+  }
+
+  @override
+  void dispose() {
+    AppState.instance.dataVersion.removeListener(_onDataChanged);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final onSurface = theme.colorScheme.onSurface;
-    final borderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade300;
+    final borderColor = theme.colorScheme.outlineVariant; // align to frontend slate tone
     final selectedBorder = theme.colorScheme.primary;
     final selectedBg = theme.colorScheme.primary.withOpacity(isDark ? 0.12 : 0.06);
-    final weekdayStyle = TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600);
+    final weekdayStyle = TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B));
     return SafeArea(
       top: true,
       bottom: false,
@@ -94,30 +116,47 @@ class _CalendarScreenState extends State<CalendarScreen> {
           // Weekday header (edge-to-edge)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: _weekdays
+            children: (_startMonday ? _weekdays : ['日','月','火','水','木','金','土'])
                 .map((label) => Expanded(child: Center(child: Text(label, style: weekdayStyle))))
                 .toList(),
           ),
           const SizedBox(height: 6),
 
-          // Calendar grid (edge-to-edge)
-          if (_loading)
-            const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 24), child: CircularProgressIndicator()))
-          else
-            _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
+          // Scrollable content area to prevent bottom overflow
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 88),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Calendar grid (edge-to-edge)
+                  if (_loading)
+                    const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 24), child: CircularProgressIndicator()))
+                  else
+                    _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
 
-          // Day transactions list (with side padding)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _buildSelectedDateLabel(context),
+                  // Monthly net summary (between calendar and daily transactions)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: _buildMonthlyNetSummary(context),
+                  ),
+
+                  // Day transactions list (with side padding)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildSelectedDateLabel(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildDayTransactionsList(),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildDayTransactionsList(),
           ),
         ],
       ),
@@ -129,7 +168,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
 
     // Monday-first weekday index (Mon=0..Sun=6)
-    final firstWeekday = (firstDay.weekday + 6) % 7;
+    final firstWeekday = _startMonday ? ((firstDay.weekday + 6) % 7) : (firstDay.weekday % 7);
     final daysInMonth = lastDay.day;
     final totalCells = ((firstWeekday + daysInMonth + 6) ~/ 7) * 7; // round up to full weeks
 
@@ -150,7 +189,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final isDark = theme.brightness == Brightness.dark;
       final gridColor = _isSameDay(_selectedDate, date)
           ? theme.colorScheme.primary
-          : (isDark ? Colors.grey.shade700 : Colors.grey.shade300);
+          : theme.colorScheme.outlineVariant;
       final col = i % 7;
       final row = i ~/ 7;
       final totalRows = (totalCells / 7).ceil();
@@ -198,7 +237,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
-                  color: isCurrent ? Theme.of(context).colorScheme.onSurface : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade600 : Colors.grey.shade400),
+                  color: isCurrent ? Theme.of(context).colorScheme.onSurface : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8)),
                 ),
               ),
               const SizedBox(height: 2),
@@ -211,7 +250,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    income.toStringAsFixed(0),
+                    '${income.toStringAsFixed(0)}円',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.green.shade300 : Colors.green.shade700, fontSize: 9, fontWeight: FontWeight.w600),
@@ -227,7 +266,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      expense.toStringAsFixed(0),
+                      '${expense.toStringAsFixed(0)}円',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.red.shade300 : Colors.red.shade700, fontSize: 9, fontWeight: FontWeight.w600),
@@ -235,15 +274,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 ),
               if (expense == 0 && income == 0)
-                Text(
-                  '—',
-                  style: TextStyle(
-                    color: isCurrent
-                        ? (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade600 : Colors.grey.shade400)
-                        : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : Colors.grey.shade300),
-                    fontSize: 10,
-                  ),
-                ),
+                const SizedBox.shrink(),
             ],
           ),
         ),
@@ -267,6 +298,42 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
+  Widget _buildMonthlyNetSummary(BuildContext context) {
+    // Compute monthly totals from currently loaded transactions
+    double income = 0, expense = 0;
+    for (final t in _transactions) {
+      if (t.type == 'income') income += t.amount;
+      if (t.type == 'expense') expense += t.amount;
+    }
+    final net = income - expense;
+    final nf = NumberFormat('#,##0', 'ja_JP');
+
+    Widget metric(String label, String value, Color color) {
+      final theme = Theme.of(context);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
+          const SizedBox(height: 2),
+          Text('$value円', style: theme.textTheme.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700)),
+        ],
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Expanded(child: metric('収入', nf.format(income), Colors.green)),
+            Expanded(child: metric('支出', nf.format(expense), Colors.red)),
+            Expanded(child: metric('総収支', nf.format(net), net >= 0 ? Colors.green : Colors.red)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDayTransactionsList() {
     final date = _selectedDate;
     if (date == null) {
@@ -280,6 +347,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (items.isEmpty) {
       return const Text('この日に記録された取引はありません', style: TextStyle(color: Colors.grey));
     }
+    final nf = NumberFormat('#,##0', 'ja_JP');
     return SizedBox(
       height: 160,
       child: ListView.separated(
@@ -294,12 +362,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
             title: Text(t.category?.name ?? '(カテゴリ不明)'),
             subtitle: Text(t.description.isEmpty ? '' : t.description),
             trailing: Text(
-              '$sign${t.amount.toStringAsFixed(0)}',
-              style: TextStyle(color: color, fontWeight: FontWeight.bold),
+              '$sign${nf.format(t.amount)}円',
+              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
             ),
+            onTap: () async {
+              final updated = await _openEditTransaction(t);
+              if (updated == true) _load();
+            },
           );
         },
       ),
+    );
+  }
+
+  Future<bool?> _openEditTransaction(MoneyTransaction t) async {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => TransactionEditSheet(transaction: t),
     );
   }
 

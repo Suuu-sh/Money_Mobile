@@ -15,4 +15,10 @@ class AppState {
   final ValueNotifier<AuthSession?> auth = ValueNotifier<AuthSession?>(null);
   // Theme mode for the app. Default is light.
   final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+  // Data version: bump when transactions/categories/budgets change
+  final ValueNotifier<int> dataVersion = ValueNotifier<int>(0);
+
+  void bumpDataVersion() {
+    dataVersion.value = dataVersion.value + 1;
+  }
 }
