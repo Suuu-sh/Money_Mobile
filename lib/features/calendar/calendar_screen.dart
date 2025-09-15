@@ -145,16 +145,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final income = dayTx.where((t) => t.type == 'income').fold<double>(0, (s, t) => s + t.amount);
       final expense = dayTx.where((t) => t.type == 'expense').fold<double>(0, (s, t) => s + t.amount);
 
+      final theme = Theme.of(context);
+      final isDark = theme.brightness == Brightness.dark;
+      final gridColor = _isSameDay(_selectedDate, date)
+          ? theme.colorScheme.primary
+          : (isDark ? Colors.grey.shade700 : Colors.grey.shade300);
+      final col = i % 7;
+      final row = i ~/ 7;
+      final totalRows = (totalCells / 7).ceil();
+      final isFirstCol = col == 0;
+      final isLastCol = col == 6;
+      final isLastRow = row == totalRows - 1;
+
       return InkWell(
         onTap: () => setState(() => _selectedDate = date),
         child: Container(
           margin: edgeToEdge ? EdgeInsets.zero : const EdgeInsets.all(2),
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: _isSameDay(_selectedDate, date) ? Theme.of(context).colorScheme.primary.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.06) : null,
-            border: Border.all(
-              color: _isSameDay(_selectedDate, date) ? Theme.of(context).colorScheme.primary : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : Colors.grey.shade300),
-              width: edgeToEdge ? 0.5 : 1,
+            color: _isSameDay(_selectedDate, date)
+                ? theme.colorScheme.primary.withOpacity(isDark ? 0.12 : 0.06)
+                : null,
+            border: Border(
+              left: BorderSide(color: gridColor, width: isFirstCol ? 0 : (edgeToEdge ? 0.5 : 1)),
+              right: BorderSide(color: gridColor, width: isLastCol ? 0 : (edgeToEdge ? 0.5 : 1)),
+              top: BorderSide(color: gridColor, width: row == 0 ? (edgeToEdge ? 0.5 : 1) : 0),
+              bottom: BorderSide(color: gridColor, width: edgeToEdge ? 0.5 : 1),
             ),
             borderRadius: edgeToEdge ? BorderRadius.zero : BorderRadius.circular(8),
           ),
