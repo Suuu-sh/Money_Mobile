@@ -32,17 +32,19 @@ class _AppShellState extends State<AppShell> {
           SettingsScreen(),
         ],
       ),
-      floatingActionButton: FloatingActionButton.small(
-        onPressed: _openQuickInput,
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 6,
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox(
+      bottomNavigationBar: SafeArea(
+        child: Container(
           height: 62,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
           child: Row(
             children: [
               Expanded(
@@ -63,7 +65,9 @@ class _AppShellState extends State<AppShell> {
                   onTap: () => setState(() => _index = 1),
                 ),
               ),
-              const SizedBox(width: 56),
+              Expanded(
+                child: _PlusTab(onTap: _openQuickInput),
+              ),
               Expanded(
                 child: _TabItem(
                   icon: Icons.insights_outlined,
@@ -145,6 +149,35 @@ class _TabItem extends StatelessWidget {
               Text(label, style: TextStyle(color: color, fontSize: 11)),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlusTab extends StatelessWidget {
+  const _PlusTab({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = Theme.of(context).colorScheme.primaryContainer;
+    final fg = Theme.of(context).colorScheme.onPrimaryContainer;
+    return Center(
+      child: InkResponse(
+        onTap: onTap,
+        radius: 28,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 8, offset: const Offset(0, 4)),
+            ],
+          ),
+          child: Icon(Icons.add, color: fg),
         ),
       ),
     );
