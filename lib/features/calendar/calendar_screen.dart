@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
+import 'package:money_tracker_mobile/features/input/input_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -108,9 +109,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
           // Day transactions list (with side padding)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _buildSelectedDateLabel(context),
+            child: Row(
+              children: [
+                Expanded(child: _buildSelectedDateLabel(context)),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: () async {
+                    final date = _selectedDate ?? DateTime.now();
+                    await showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (ctx) => SafeArea(
+                        child: Padding(
+                          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+                          child: SizedBox(
+                            height: MediaQuery.of(ctx).size.height * 0.8,
+                            child: InputScreen(initialDate: date),
+                          ),
+                        ),
+                      ),
+                    );
+                    // Reload data after possible add
+                    _load();
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('入力'),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),

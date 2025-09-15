@@ -6,7 +6,9 @@ import 'package:money_tracker_mobile/features/transactions/transactions_reposito
 import 'package:money_tracker_mobile/models/category.dart';
 
 class InputScreen extends StatefulWidget {
-  const InputScreen({super.key});
+  const InputScreen({super.key, this.initialDate});
+
+  final DateTime? initialDate;
 
   @override
   State<InputScreen> createState() => _InputScreenState();
@@ -32,6 +34,9 @@ class _InputScreenState extends State<InputScreen> {
   void initState() {
     super.initState();
     _load();
+    if (widget.initialDate != null) {
+      _date = widget.initialDate!;
+    }
   }
 
   Future<void> _load() async {
@@ -67,6 +72,10 @@ class _InputScreenState extends State<InputScreen> {
         _amountController.clear();
         _descController.clear();
       });
+      // クイック入力用途では追加後に閉じる
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       setState(() => _message = '取引の作成に失敗しました');
     } finally {
