@@ -135,10 +135,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     final cells = List<Widget>.generate(totalCells, (i) {
       final dayNum = i - firstWeekday + 1;
-      if (dayNum < 1 || dayNum > daysInMonth) {
-        return const SizedBox.shrink();
-      }
+      // その月の範囲外も DateTime の繰り上げ/繰り下げに任せて表示（前月・翌月の数字を埋める）
       final date = DateTime(_currentMonth.year, _currentMonth.month, dayNum);
+      final isCurrent = date.month == _currentMonth.month;
       final dayTx = _transactions.where((t) {
         final d = t.date.toLocal();
         return d.year == date.year && d.month == date.month && d.day == date.day;
@@ -163,7 +162,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('$dayNum', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+              Text(
+                '${date.day}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: isCurrent ? Colors.black : Colors.grey.shade400,
+                ),
+              ),
               const SizedBox(height: 2),
               // Show total daily expense prominently
               if (expense > 0)
@@ -181,7 +187,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 ),
               if (expense == 0)
-                Text('—', style: TextStyle(color: Colors.grey.shade400, fontSize: 10)),
+                Text('—', style: TextStyle(color: isCurrent ? Colors.grey.shade400 : Colors.grey.shade300, fontSize: 10)),
             ],
           ),
         ),
