@@ -156,16 +156,38 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               const SizedBox(height: 12),
 
-              // 今月の総計（数字表示）- 固定費込み
+              // 今月の総計（数字表示）- 固定費も集計に含める
               _card(
                 title: '今月の総計',
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
                     children: [
-                      Expanded(child: _metric('収入', nf.format(s.thisMonthIncome), Colors.green)),
-                      Expanded(child: _metric('支出（固定費込）', nf.format(s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount)), Colors.red)),
-                      Expanded(child: _metric('収支', nf.format(s.thisMonthIncome - (s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount))), (s.thisMonthIncome - (s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount))) >= 0 ? Colors.green : Colors.red)),
+                      Expanded(child: _metric(
+                        '収入',
+                        nf.format(
+                          s.thisMonthIncome + _fixed.where((f) => f.type == 'income').fold<double>(0, (sum, f) => sum + f.amount),
+                        ),
+                        Colors.green,
+                      )),
+                      Expanded(child: _metric(
+                        '支出',
+                        nf.format(
+                          s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount),
+                        ),
+                        Colors.red,
+                      )),
+                      Expanded(child: _metric(
+                        '収支',
+                        nf.format(
+                          (s.thisMonthIncome + _fixed.where((f) => f.type == 'income').fold<double>(0, (sum, f) => sum + f.amount)) -
+                          (s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount)),
+                        ),
+                        ((s.thisMonthIncome + _fixed.where((f) => f.type == 'income').fold<double>(0, (sum, f) => sum + f.amount)) -
+                         (s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount))) >= 0
+                          ? Colors.green
+                          : Colors.red,
+                      )),
                     ],
                   ),
                 ),
