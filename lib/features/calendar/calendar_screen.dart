@@ -97,9 +97,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
           // Calendar grid (edge-to-edge)
           if (_loading)
-            const Expanded(child: Center(child: CircularProgressIndicator()))
+            const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 24), child: CircularProgressIndicator()))
           else
-            Expanded(child: _buildCalendarGrid(edgeToEdge: true)),
+            _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
 
           // Day transactions list (with side padding)
           Padding(
@@ -124,7 +124,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildCalendarGrid({bool edgeToEdge = false}) {
+  Widget _buildCalendarGrid({bool edgeToEdge = false, bool shrinkWrap = false}) {
     final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
 
@@ -194,7 +194,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       mainAxisSpacing: edgeToEdge ? 0 : 4,
       crossAxisSpacing: edgeToEdge ? 0 : 4,
       padding: EdgeInsets.zero,
-      physics: const ClampingScrollPhysics(),
+      shrinkWrap: shrinkWrap,
+      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : const ClampingScrollPhysics(),
       children: cells,
     );
   }
