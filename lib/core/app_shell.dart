@@ -31,46 +31,61 @@ class _AppShellState extends State<AppShell> {
           SettingsScreen(),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.small(
         onPressed: _openQuickInput,
         child: const Icon(Icons.add),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
+        notchMargin: 6,
+        clipBehavior: Clip.antiAlias,
         child: SizedBox(
-          height: 64,
+          height: 62,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _TabItem(
-                icon: Icons.calendar_today_outlined,
-                activeIcon: Icons.calendar_today,
-                label: 'カレンダー',
-                selected: _index == 0,
-                onTap: () => setState(() => _index = 0),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _TabItem(
+                      icon: Icons.calendar_today_outlined,
+                      activeIcon: Icons.calendar_today,
+                      label: 'カレンダー',
+                      selected: _index == 0,
+                      onTap: () => setState(() => _index = 0),
+                    ),
+                    _TabItem(
+                      icon: Icons.bar_chart_outlined,
+                      activeIcon: Icons.bar_chart,
+                      label: 'レポート',
+                      selected: _index == 1,
+                      onTap: () => setState(() => _index = 1),
+                    ),
+                  ],
+                ),
               ),
-              _TabItem(
-                icon: Icons.bar_chart_outlined,
-                activeIcon: Icons.bar_chart,
-                label: 'レポート',
-                selected: _index == 1,
-                onTap: () => setState(() => _index = 1),
-              ),
-              const SizedBox(width: 48), // space for FAB notch
-              _TabItem(
-                icon: Icons.insights_outlined,
-                activeIcon: Icons.insights,
-                label: '分析',
-                selected: _index == 2,
-                onTap: () => setState(() => _index = 2),
-              ),
-              _TabItem(
-                icon: Icons.settings_outlined,
-                activeIcon: Icons.settings,
-                label: '設定',
-                selected: _index == 3,
-                onTap: () => setState(() => _index = 3),
+              const SizedBox(width: 56),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _TabItem(
+                      icon: Icons.insights_outlined,
+                      activeIcon: Icons.insights,
+                      label: '分析',
+                      selected: _index == 2,
+                      onTap: () => setState(() => _index = 2),
+                    ),
+                    _TabItem(
+                      icon: Icons.settings_outlined,
+                      activeIcon: Icons.settings,
+                      label: '設定',
+                      selected: _index == 3,
+                      onTap: () => setState(() => _index = 3),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
