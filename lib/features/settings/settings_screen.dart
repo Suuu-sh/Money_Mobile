@@ -5,9 +5,14 @@ import 'package:money_tracker_mobile/features/auth/auth_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   SettingsScreen({super.key});
 
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
   final _authRepo = AuthRepository(ApiClient());
 
   @override
@@ -66,13 +71,13 @@ class SettingsScreen extends StatelessWidget {
                       ChoiceChip(
                         label: const Text('月'),
                         selected: startMonday,
-                        onSelected: (_) async { final p = await SharedPreferences.getInstance(); await p.setBool('startMonday', true); setState(() {}); },
+                        onSelected: (_) async { final p = await SharedPreferences.getInstance(); await p.setBool('startMonday', true); if (mounted) setState(() {}); },
                       ),
                       const SizedBox(width: 8),
                       ChoiceChip(
                         label: const Text('日'),
                         selected: !startMonday,
-                        onSelected: (_) async { final p = await SharedPreferences.getInstance(); await p.setBool('startMonday', false); setState(() {}); },
+                        onSelected: (_) async { final p = await SharedPreferences.getInstance(); await p.setBool('startMonday', false); if (mounted) setState(() {}); },
                       ),
                     ],
                   ),
@@ -89,7 +94,7 @@ class SettingsScreen extends StatelessWidget {
                           DropdownMenuItem(value: 'USD', child: Text('USD')),
                           DropdownMenuItem(value: 'EUR', child: Text('EUR')),
                         ],
-                        onChanged: (v) async { final p = await SharedPreferences.getInstance(); await p.setString('currency', v ?? 'JPY'); setState(() {}); },
+                        onChanged: (v) async { final p = await SharedPreferences.getInstance(); await p.setString('currency', v ?? 'JPY'); if (mounted) setState(() {}); },
                       ),
                     ],
                   ),
@@ -138,7 +143,7 @@ class SettingsScreen extends StatelessWidget {
                             if (data.containsKey('currency')) await prefs.setString('currency', data['currency'] as String);
                             if (context.mounted) Navigator.pop(context);
                           } catch (_) { if (context.mounted) Navigator.pop(context); }
-                          if (context.mounted) setState(() {});
+                          if (mounted) setState(() {});
                         }, child: const Text('読み込み')),
                       ],
                     ),
