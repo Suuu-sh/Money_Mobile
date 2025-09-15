@@ -85,7 +85,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         for (var i = 0; i < entries.length; i++) {
           final id = entries[i].key;
           final amount = entries[i].value;
-          if (amount <= 0) return;
+          if (amount <= 0) continue;
           final c = _categoryMap[id];
           final color = c != null ? _parseHex(c.color) : Colors.blueGrey;
           final isTouched = _touchedIndex == i;
