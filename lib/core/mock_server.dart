@@ -109,13 +109,17 @@ class MockServer {
   dynamic handlePost(String path, Map<String, dynamic> body) {
     if (path.startsWith('/transactions')) {
       final id = _transactions.length + 1;
+      final matched = _categories.firstWhere(
+        (c) => c['id'] == (body['categoryId'] as num).toInt(),
+        orElse: () => <String, dynamic>{},
+      );
       final map = {
         'id': id,
         'userId': 1,
         'type': body['type'] ?? 'expense',
         'amount': (body['amount'] as num).toDouble(),
         'categoryId': (body['categoryId'] as num).toInt(),
-        'category': _categories.firstWhere((c) => c['id'] == (body['categoryId'] as num).toInt(), orElse: () => null),
+        'category': matched.isEmpty ? null : matched,
         'description': (body['description'] ?? '') as String,
         'date': (body['date'] as String?) ?? DateFormat('yyyy-MM-dd').format(DateTime.now()),
       };
@@ -168,4 +172,3 @@ class MockServer {
     }
   }
 }
-
