@@ -83,15 +83,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ],
             ),
           ),
-          // Weekday header (with side padding)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: _weekdays
-                  .map((label) => Expanded(child: Center(child: Text(label, style: const TextStyle(color: Colors.grey)))))
-                  .toList(),
-            ),
+          // Weekday header (edge-to-edge)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: _weekdays
+                .map((label) => Expanded(child: Center(child: Text(label, style: const TextStyle(color: Colors.grey)))))
+                .toList(),
           ),
           const SizedBox(height: 6),
 
@@ -106,12 +103,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                _selectedDate == null
-                    ? '取引'
-                    : DateFormat('yyyy/MM/dd（E）', 'ja').format(_selectedDate!),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
+              child: _buildSelectedDateLabel(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -257,6 +249,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  // Build selected date label with gray parentheses in dark theme
+  Widget _buildSelectedDateLabel(BuildContext context) {
+    if (_selectedDate == null) {
+      return const Text('取引', style: TextStyle(fontWeight: FontWeight.bold));
+    }
+    final d = _selectedDate!;
+    final main = DateFormat('yyyy/MM/dd', 'ja').format(d);
+    final week = DateFormat('E', 'ja').format(d);
+    final baseStyle = const TextStyle(fontWeight: FontWeight.bold);
+    final parenStyle = baseStyle.copyWith(color: Colors.grey);
+    return RichText(
+      text: TextSpan(
+        style: DefaultTextStyle.of(context).style.merge(baseStyle),
+        children: [
+          TextSpan(text: main),
+          TextSpan(text: '（', style: parenStyle),
+          TextSpan(text: week),
+          TextSpan(text: '）', style: parenStyle),
+        ],
       ),
     );
   }
