@@ -79,6 +79,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
       bottom: false,
       child: Column(
         children: [
+          // Monthly net summary (move above month selector)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: _buildMonthlyNetSummary(context),
+          ),
+
           // Header (with side padding)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -112,12 +118,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 24), child: CircularProgressIndicator()))
                   else
                     _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
-
-                  // Monthly net summary (between calendar and daily transactions)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: _buildMonthlyNetSummary(context),
-                  ),
 
                   // Day transactions list (with side padding)
                   Padding(
