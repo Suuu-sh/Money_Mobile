@@ -260,15 +260,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 ),
               if (expense == 0 && income == 0)
-                Text(
-                  '—',
-                  style: TextStyle(
-                    color: isCurrent
-                        ? (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade600 : Colors.grey.shade400)
-                        : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : Colors.grey.shade300),
-                    fontSize: 10,
-                  ),
-                ),
+                const SizedBox.shrink(),
             ],
           ),
         ),
