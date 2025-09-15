@@ -4,6 +4,7 @@ import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/categories/categories_repository.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/models/category.dart';
+import 'package:money_tracker_mobile/core/app_state.dart';
 
 class InputScreen extends StatefulWidget {
   const InputScreen({super.key, this.initialDate});
