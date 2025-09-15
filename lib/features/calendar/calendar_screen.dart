@@ -154,23 +154,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('$dayNum', style: const TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
+              Text('$dayNum', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+              const SizedBox(height: 2),
               // Show total daily expense prominently
               if (expense > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
                     color: Colors.red.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     '-${expense.toStringAsFixed(0)}',
-                    style: TextStyle(color: Colors.red.shade700, fontSize: 12, fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.red.shade700, fontSize: 10, fontWeight: FontWeight.w600),
                   ),
                 ),
               if (expense == 0)
-                Text('—', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                Text('—', style: TextStyle(color: Colors.grey.shade400, fontSize: 10)),
             ],
           ),
         ),
@@ -179,6 +181,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return GridView.count(
       crossAxisCount: 7,
+      childAspectRatio: 0.85, // give a bit more vertical room to avoid overflow
+      mainAxisSpacing: 4,
+      crossAxisSpacing: 4,
+      physics: const ClampingScrollPhysics(),
       children: cells,
     );
   }
