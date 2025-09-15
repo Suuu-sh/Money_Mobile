@@ -167,10 +167,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ? theme.colorScheme.primary.withOpacity(isDark ? 0.12 : 0.06)
                 : null,
             border: Border(
+              // 外側の左右線は消し、内側のみ見せる
               left: BorderSide(color: gridColor, width: isFirstCol ? 0 : (edgeToEdge ? 0.5 : 1)),
               right: BorderSide(color: gridColor, width: isLastCol ? 0 : (edgeToEdge ? 0.5 : 1)),
-              top: BorderSide(color: gridColor, width: row == 0 ? (edgeToEdge ? 0.5 : 1) : 0),
-              bottom: BorderSide(color: gridColor, width: edgeToEdge ? 0.5 : 1),
+              // 上端線も不要（1行目の上線は0）
+              top: BorderSide(color: gridColor, width: 0),
+              // 最下段の外線を消し、内部行だけ線を出す
+              bottom: BorderSide(color: gridColor, width: isLastRow ? 0 : (edgeToEdge ? 0.5 : 1)),
             ),
             borderRadius: edgeToEdge ? BorderRadius.zero : BorderRadius.circular(8),
           ),
