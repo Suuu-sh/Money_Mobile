@@ -13,6 +13,6 @@ class AppConfig {
   // Set with: --dart-define=USE_MOCK=false to disable.
   static const bool useMock = bool.fromEnvironment(
     'USE_MOCK',
-    defaultValue: true,
+    defaultValue: false,
   );
 }

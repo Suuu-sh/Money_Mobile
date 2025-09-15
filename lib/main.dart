@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:money_tracker_mobile/core/app_shell.dart';
 import 'package:money_tracker_mobile/core/app_state.dart';
-// Login screen is disabled during testing
+import 'package:money_tracker_mobile/features/auth/login_screen.dart';
 import 'package:money_tracker_mobile/core/token_store.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/auth/auth_repository.dart';
@@ -34,13 +34,18 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
   }
 
   Future<void> _bootstrap() async {
-    // Always mark as logged in for testing
-    const fakeToken = 'dev-test-token';
-    await TokenStore.instance.setToken(fakeToken);
-    AppState.instance.auth.value = AuthSession(
-      token: fakeToken,
-      user: User(id: 0, email: 'test@example.com', name: 'Tester'),
-    );
+    // Restore session if token exists
+    final token = TokenStore.instance.token;
+    if (token != null && token.isNotEmpty) {
+      try {
+        final user = await AuthRepository(ApiClient()).me();
+        AppState.instance.auth.value = AuthSession(token: token, user: user);
+      } catch (_) {
+        // invalid token -> clear
+        await TokenStore.instance.setToken(null);
+        AppState.instance.auth.value = null;
+      }
+    }
     // Load theme mode from prefs
     final prefs = await SharedPreferences.getInstance();
     final mode = prefs.getString('themeMode');
@@ -64,35 +69,39 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: AppState.instance.themeMode,
       builder: (context, mode, _) {
-        return MaterialApp(
-          title: 'MoneyTracker',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF22C55E), brightness: Brightness.light),
-            scaffoldBackgroundColor: const Color(0xFFF8FAF7),
-            useMaterial3: true,
-          ),
-          darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF22C55E),
-              brightness: Brightness.dark,
-            ).copyWith(
-              surface: const Color(0xFF151718),
-              surfaceContainer: const Color(0xFF1B1E20),
-              background: const Color(0xFF121415),
-            ),
-            scaffoldBackgroundColor: const Color(0xFF121415), // 落ち着いた黒
-            useMaterial3: true,
-          ),
-          themeMode: mode,
-          // Japanese UI + date symbols
-          locale: const Locale('ja'),
-          supportedLocales: const [Locale('ja'), Locale('en')],
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          home: const AppShell(),
+        return ValueListenableBuilder<AuthSession?>(
+          valueListenable: AppState.instance.auth,
+          builder: (context, session, __) {
+            return MaterialApp(
+              title: 'MoneyTracker',
+              theme: ThemeData(
+                colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF22C55E), brightness: Brightness.light),
+                scaffoldBackgroundColor: const Color(0xFFF8FAF7),
+                useMaterial3: true,
+              ),
+              darkTheme: ThemeData(
+                colorScheme: ColorScheme.fromSeed(
+                  seedColor: const Color(0xFF22C55E),
+                  brightness: Brightness.dark,
+                ).copyWith(
+                  surface: const Color(0xFF151718),
+                  surfaceContainer: const Color(0xFF1B1E20),
+                  background: const Color(0xFF121415),
+                ),
+                scaffoldBackgroundColor: const Color(0xFF121415),
+                useMaterial3: true,
+              ),
+              themeMode: mode,
+              locale: const Locale('ja'),
+              supportedLocales: const [Locale('ja'), Locale('en')],
+              localizationsDelegates: const [
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              home: session == null ? const LoginScreen() : const AppShell(),
+            );
+          },
         );
       },
     );
