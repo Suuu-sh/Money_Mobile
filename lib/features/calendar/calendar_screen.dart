@@ -202,22 +202,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
               ),
               const SizedBox(height: 2),
-              // Show daily total (prefer expense, otherwise income). No sign prefix.
-              if (expense > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.24 : 0.08),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    expense.toStringAsFixed(0),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.red.shade300 : Colors.red.shade700, fontSize: 9, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              if (expense == 0 && income > 0)
+              // Show both income (green) and expense (red) if they exist.
+              if (income > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
                   decoration: BoxDecoration(
@@ -229,6 +215,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.green.shade300 : Colors.green.shade700, fontSize: 9, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              if (expense > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.24 : 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      expense.toStringAsFixed(0),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.red.shade300 : Colors.red.shade700, fontSize: 9, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
               if (expense == 0 && income == 0)
