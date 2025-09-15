@@ -34,7 +34,7 @@ class _AppShellState extends State<AppShell> {
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          height: 62,
+          height: 66,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             boxShadow: [
@@ -164,20 +164,23 @@ class _PlusTab extends StatelessWidget {
     final bg = Theme.of(context).colorScheme.primaryContainer;
     final fg = Theme.of(context).colorScheme.onPrimaryContainer;
     return Center(
-      child: InkResponse(
-        onTap: onTap,
-        radius: 28,
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 8, offset: const Offset(0, 4)),
-            ],
+      child: Transform.translate(
+        offset: const Offset(0, -12), // make it "pop" over the tab bar
+        child: InkResponse(
+          onTap: onTap,
+          radius: 30,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.16), blurRadius: 10, offset: const Offset(0, 6)),
+              ],
+            ),
+            child: Icon(Icons.add, color: fg, size: 26),
           ),
-          child: Icon(Icons.add, color: fg),
         ),
       ),
     );
