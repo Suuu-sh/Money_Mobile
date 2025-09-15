@@ -106,6 +106,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
           else
             _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
 
+          // Monthly net summary (between calendar and daily transactions)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: _buildMonthlyNetSummary(context),
+          ),
+
           // Day transactions list (with side padding)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -265,6 +271,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _isSameDay(DateTime? a, DateTime b) {
     if (a == null) return false;
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Widget _buildMonthlyNetSummary(BuildContext context) {
+    // Compute monthly totals from currently loaded transactions
+    double income = 0, expense = 0;
+    for (final t in _transactions) {
+      if (t.type == 'income') income += t.amount;
+      if (t.type == 'expense') expense += t.amount;
+    }
+    final net = income - expense;
+    final color = net >= 0 ? Colors.green : Colors.red;
+    final nf = NumberFormat('#,##0', 'ja_JP');
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            const Text('今月の総収支', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Spacer(),
+            Text(nf.format(net), style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 16)),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildDayTransactionsList() {
