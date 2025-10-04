@@ -102,6 +102,56 @@ class MockServer {
         'transactionCount': _transactions.length,
       };
     }
+    if (path.startsWith('/analytics/spending-prediction')) {
+      final now = DateTime.now();
+      final year = int.tryParse(query?['year'] ?? '${now.year}') ?? now.year;
+      final month = int.tryParse(query?['month'] ?? '${now.month}') ?? now.month;
+      final start = DateTime(year, month, 1);
+      final end = DateTime(year, month + 1, 0);
+      final daysInMonth = end.day;
+      final isCurrentMonth = now.year == year && now.month == month;
+      final currentDay = isCurrentMonth ? now.day : daysInMonth;
+
+      final expenses = _transactions
+          .where((t) => t['type'] == 'expense')
+          .where((t) {
+            final date = DateTime.parse(t['date'] as String);
+            return !date.isBefore(start) && !date.isAfter(end);
+          })
+          .toList();
+
+      double currentSpending = 0;
+      for (final t in expenses) {
+        final date = DateTime.parse(t['date'] as String);
+        if (!isCurrentMonth || !date.isAfter(now)) {
+          currentSpending += (t['amount'] as num).toDouble();
+        }
+      }
+
+      final dailyAverage = currentDay > 0 ? currentSpending / currentDay : 0;
+      final predictedTotal = dailyAverage * daysInMonth;
+      final remainingDays = (daysInMonth - currentDay).clamp(0, daysInMonth);
+
+      String confidence = 'low';
+      if (currentDay >= 15) {
+        confidence = 'high';
+      } else if (currentDay >= 7) {
+        confidence = 'medium';
+      }
+
+      return {
+        'year': year,
+        'month': month,
+        'currentSpending': currentSpending,
+        'predictedTotal': predictedTotal,
+        'dailyAverage': dailyAverage,
+        'remainingDays': remainingDays,
+        'confidence': confidence,
+        'trend': 'stable',
+        'weeklyPattern': List.filled(7, dailyAverage),
+        'monthlyProgress': daysInMonth == 0 ? 0 : (currentDay / daysInMonth) * 100,
+      };
+    }
     // default
     return null;
   }

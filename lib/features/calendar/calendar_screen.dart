@@ -206,27 +206,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
             color: _isSameDay(_selectedDate, date)
                 ? theme.colorScheme.primary.withOpacity(isDark ? 0.12 : 0.06)
                 : null,
-            border: Border(
-              // 左右外枠は消す（内部線のみ）
-              left: BorderSide(
-                color: isFirstCol ? Colors.transparent : gridColor,
-                width: isFirstCol ? 0 : (edgeToEdge ? 0.5 : 1),
-              ),
-              right: BorderSide(
-                color: isLastCol ? Colors.transparent : gridColor,
-                width: isLastCol ? 0 : (edgeToEdge ? 0.5 : 1),
-              ),
-              // 上端は1行目のみ描画して外枠を作る
-              top: BorderSide(
-                color: row == 0 ? gridColor : Colors.transparent,
-                width: row == 0 ? (edgeToEdge ? 0.5 : 1) : 0,
-              ),
-              // 下端は最終行も含めて描画（外枠を出す）。内部線も維持
-              bottom: BorderSide(
-                color: gridColor,
-                width: edgeToEdge ? 0.5 : 1,
-              ),
-            ),
+            border: _isSameDay(_selectedDate, date)
+                // 選択時は四辺すべて色付きで囲む
+                ? Border.all(color: theme.colorScheme.primary, width: 1)
+                // 非選択時は従来の内側のみ線
+                : Border(
+                    left: BorderSide(
+                      color: isFirstCol ? Colors.transparent : gridColor,
+                      width: isFirstCol ? 0 : (edgeToEdge ? 0.5 : 1),
+                    ),
+                    right: BorderSide(
+                      color: isLastCol ? Colors.transparent : gridColor,
+                      width: isLastCol ? 0 : (edgeToEdge ? 0.5 : 1),
+                    ),
+                    top: BorderSide(
+                      color: row == 0 ? gridColor : Colors.transparent,
+                      width: row == 0 ? (edgeToEdge ? 0.5 : 1) : 0,
+                    ),
+                    bottom: BorderSide(
+                      color: gridColor,
+                      width: edgeToEdge ? 0.5 : 1,
+                    ),
+                  ),
             borderRadius: edgeToEdge ? BorderRadius.zero : BorderRadius.circular(8),
           ),
           child: Column(

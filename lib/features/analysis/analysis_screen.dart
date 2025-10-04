@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
+import 'package:money_tracker_mobile/features/analysis/analysis_repository.dart';
 import 'package:money_tracker_mobile/features/stats/stats_repository.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/features/categories/categories_repository.dart';
+import 'package:money_tracker_mobile/models/spending_prediction.dart';
 import 'package:money_tracker_mobile/models/stats.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
 import 'package:money_tracker_mobile/models/category.dart';
@@ -19,12 +21,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   final _statsRepo = StatsRepository(ApiClient());
   final _txRepo = TransactionsRepository(ApiClient());
   final _catRepo = CategoriesRepository(ApiClient());
+  final _analysisRepo = AnalysisRepository(ApiClient());
 
   Stats? _stats;
   List<MoneyTransaction> _monthTx = [];
   Map<int, Category> _catMap = {};
   DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
   bool _loading = true;
+  SpendingPrediction? _prediction;
 
   @override
   void initState() {
@@ -35,13 +39,19 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   String _dateStr(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _prediction = null;
+    });
     final start = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final end = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
     final results = await Future.wait([
       _statsRepo.fetch(),
-      _txRepo.list(startDate: _dateStr(start), endDate: _dateStr(end), pageSize: 1000),
+      _txRepo.list(
+          startDate: _dateStr(start), endDate: _dateStr(end), pageSize: 1000),
       _catRepo.list(),
+      _analysisRepo.fetchSpendingPrediction(
+          year: _currentMonth.year, month: _currentMonth.month),
     ]);
     if (!mounted) return;
     setState(() {
@@ -49,32 +59,30 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       _monthTx = results[1] as List<MoneyTransaction>;
       final cats = results[2] as List<Category>;
       _catMap = {for (final c in cats) c.id: c};
+      _prediction = results[3] as SpendingPrediction;
       _loading = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading || _stats == null) {
+    if (_loading || _stats == null || _prediction == null) {
       return const Center(child: CircularProgressIndicator());
     }
     final s = _stats!;
     final nf = NumberFormat('#,##0', 'ja_JP');
 
-    final now = DateTime.now();
-    final totalDays = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
-    final passed = (now.year == _currentMonth.year && now.month == _currentMonth.month) ? now.day : totalDays;
-
-    final monthExpense = _monthTx.where((t) => t.type == 'expense').fold<double>(0, (sum, t) => sum + t.amount);
-    final avgPerDay = passed == 0 ? 0 : monthExpense / passed;
-    final forecastExpense = (avgPerDay * totalDays);
-    final forecastBalance = s.thisMonthIncome - forecastExpense;
+    final prediction = _prediction!;
+    final totalDays =
+        DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+    final forecastBalance = s.thisMonthIncome - prediction.predictedTotal;
 
     final byCat = <int, double>{};
     for (final t in _monthTx.where((t) => t.type == 'expense')) {
       byCat[t.categoryId] = (byCat[t.categoryId] ?? 0) + t.amount;
     }
-    final topCats = byCat.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final topCats = byCat.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     // 直近比較などの追加分析はここに拡張可能
 
@@ -90,12 +98,26 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  onPressed: () { setState(() { _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1); }); _load(); },
+                  onPressed: () {
+                    setState(() {
+                      _currentMonth =
+                          DateTime(_currentMonth.year, _currentMonth.month - 1);
+                    });
+                    _load();
+                  },
                   icon: const Icon(Icons.chevron_left),
                 ),
-                Text(DateFormat('yyyy/MM').format(_currentMonth), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(DateFormat('yyyy/MM').format(_currentMonth),
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
                 IconButton(
-                  onPressed: () { setState(() { _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1); }); _load(); },
+                  onPressed: () {
+                    setState(() {
+                      _currentMonth =
+                          DateTime(_currentMonth.year, _currentMonth.month + 1);
+                    });
+                    _load();
+                  },
                   icon: const Icon(Icons.chevron_right),
                 ),
               ],
@@ -107,13 +129,25 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _metric('現在の支出', nf.format(monthExpense), Colors.redAccent),
+                  _metric('現在の支出', nf.format(prediction.currentSpending),
+                      Colors.redAccent),
                   const SizedBox(height: 6),
-                  _metric('予測支出（${totalDays}日間）', nf.format(forecastExpense), Colors.orangeAccent),
+                  _metric(
+                      '予測支出（${totalDays}日間）',
+                      nf.format(prediction.predictedTotal),
+                      Colors.orangeAccent),
                   const SizedBox(height: 6),
-                  _metric('予測収支', nf.format(forecastBalance), forecastBalance >= 0 ? Colors.green : Colors.red),
+                  _metric('予測収支', nf.format(forecastBalance),
+                      forecastBalance >= 0 ? Colors.green : Colors.red),
                   const SizedBox(height: 6),
-                  Text('平均: ${nf.format(avgPerDay)}円/日・残り${(totalDays - passed).clamp(0, totalDays)}日'),
+                  Text(
+                      '月の進捗: ${prediction.monthlyProgress.toStringAsFixed(0)}%'),
+                  const SizedBox(height: 6),
+                  Text(
+                    '平均: ${nf.format(prediction.dailyAverage)}円/日・残り${prediction.remainingDays}日・精度: ${_confidenceLabel(prediction.confidence)}',
+                  ),
+                  const SizedBox(height: 6),
+                  Text('傾向: ${_trendLabel(prediction.trend)}'),
                 ],
               ),
             ),
@@ -127,20 +161,34 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   ...topCats.take(3).map((e) {
                     final cat = _catMap[e.key];
                     final name = cat?.name ?? '未分類';
-                    final percent = (byCat.values.isEmpty) ? 0 : (e.value / byCat.values.reduce((a, b) => a + b) * 100);
+                    final percent = (byCat.values.isEmpty)
+                        ? 0
+                        : (e.value /
+                            byCat.values.reduce((a, b) => a + b) *
+                            100);
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Row(
                         children: [
-                          Container(width: 10, height: 10, decoration: BoxDecoration(color: _parseHex(cat?.color ?? '#999999'), shape: BoxShape.circle)),
+                          Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                  color: _parseHex(cat?.color ?? '#999999'),
+                                  shape: BoxShape.circle)),
                           const SizedBox(width: 8),
                           Expanded(child: Text(name)),
-                          Text('${nf.format(e.value)}円（${percent.toStringAsFixed(0)}%）', style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text(
+                              '${nf.format(e.value)}円（${percent.toStringAsFixed(0)}%）',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
                         ],
                       ),
                     );
                   }),
-                  if (topCats.isEmpty) const Text('データがありません', style: TextStyle(color: Colors.grey)),
+                  if (topCats.isEmpty)
+                    const Text('データがありません',
+                        style: TextStyle(color: Colors.grey)),
                 ],
               ),
             ),
@@ -173,11 +221,37 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
+        Text(label,
+            style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
         const SizedBox(height: 4),
-        Text(value, style: theme.textTheme.headlineSmall?.copyWith(color: color, fontWeight: FontWeight.w700)),
+        Text(value,
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(color: color, fontWeight: FontWeight.w700)),
       ],
     );
+  }
+
+  String _confidenceLabel(String value) {
+    switch (value) {
+      case 'high':
+        return '高精度';
+      case 'medium':
+        return '中精度';
+      default:
+        return '低精度';
+    }
+  }
+
+  String _trendLabel(String value) {
+    switch (value) {
+      case 'increasing':
+        return '増加傾向';
+      case 'decreasing':
+        return '減少傾向';
+      default:
+        return '安定';
+    }
   }
 
   Color _parseHex(String hex, {int alpha = 0xFF}) {
@@ -185,5 +259,4 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     final val = int.tryParse(cleaned, radix: 16) ?? 0x999999;
     return Color((alpha << 24) | val);
   }
-
 }
