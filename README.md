@@ -25,9 +25,9 @@ This is the Flutter mobile client for MoneyTracker.
   
   ```bash
   # Example: local backend
-  flutter run --dart-define=API_BASE_URL=http://localhost:8080/api
+  flutter run --dart-define=API_BASE_URL=http://localhost:8000/api
 
-  # Example: production backend
+ # Example: production backend
   flutter run --dart-define=API_BASE_URL=https://your-api-domain.com/api
   ```
 
@@ -35,7 +35,7 @@ This is the Flutter mobile client for MoneyTracker.
 
    ```bash
    # Use port 3000 to match backend CORS allowlist
-   flutter run -d chrome --web-port 3000 --dart-define=API_BASE_URL=http://localhost:8080/api
+   flutter run -d chrome --web-port 3000 --dart-define=API_BASE_URL=http://localhost:8000/api
    ```
 
 The app now includes:
@@ -45,7 +45,7 @@ The app now includes:
 - Categories list with filtering
 - Settings with logout
 
-Networking is via `lib/core/api_client.dart` and base URL is read from `--dart-define=API_BASE_URL` (defaults to `http://localhost:8080/api`).
+Networking is via `lib/core/api_client.dart` and base URL is read from `--dart-define=API_BASE_URL` (defaults to `http://localhost:8000/api`).
 
 ## Next Steps
 - Add feature modules (auth, dashboard, transactions, budgets) under `lib/features`.
