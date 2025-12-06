@@ -24,6 +24,8 @@ Future<void> _loadEnv() async {
     await dotenv.load(fileName: '.env.mobile');
   } catch (e) {
     debugPrint('Env file not loaded: $e');
+    // Mark dotenv as initialized with empty values to avoid crashes.
+    dotenv.testLoad(fileInput: '');
   }
 }
 

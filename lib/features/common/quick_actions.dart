@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
+import 'package:money_tracker_mobile/core/app_state.dart';
 import 'package:money_tracker_mobile/features/categories/categories_repository.dart';
+import 'package:money_tracker_mobile/features/fixed_expenses/fixed_expenses_manager.dart';
+import 'package:money_tracker_mobile/features/budgets/category_budgets_repository.dart';
 import 'package:money_tracker_mobile/models/category.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class QuickActionSheet extends StatelessWidget {
   const QuickActionSheet({super.key, required this.onCreateTransaction});
@@ -12,7 +14,6 @@ class QuickActionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -21,6 +22,18 @@ class QuickActionSheet extends StatelessWidget {
             leading: const Icon(Icons.add_circle_outline),
             title: const Text('取引を追加'),
             onTap: onCreateTransaction,
+          ),
+          ListTile(
+            leading: const Icon(Icons.payments_outlined),
+            title: const Text('固定費を追加'),
+            onTap: () async {
+              Navigator.of(context).pop();
+              await showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => const FixedExpenseFormSheet(),
+              );
+            },
           ),
           ListTile(
             leading: const Icon(Icons.folder_open),
@@ -162,11 +175,47 @@ class BudgetCreateSheet extends StatefulWidget {
 
 class _BudgetCreateSheetState extends State<BudgetCreateSheet> {
   final _amount = TextEditingController();
+  final _catRepo = CategoriesRepository(ApiClient());
+  final _budgetRepo = CategoryBudgetsRepository(ApiClient());
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   bool _saving = false;
+  bool _loading = true;
+  List<Category> _categories = [];
+  int? _selectedCategoryId;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final cats = await _catRepo.list();
+      if (!mounted) return;
+      setState(() {
+        _categories = cats;
+        _selectedCategoryId = cats.isNotEmpty ? cats.first.id : null;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'カテゴリの取得に失敗しました';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -179,7 +228,16 @@ class _BudgetCreateSheetState extends State<BudgetCreateSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('月次予算を設定', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text('カテゴリ別予算を設定', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              value: _selectedCategoryId,
+              items: _categories
+                  .map((c) => DropdownMenuItem<int>(value: c.id, child: Text(c.name)))
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedCategoryId = v),
+              decoration: const InputDecoration(labelText: 'カテゴリ'),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -212,6 +270,11 @@ class _BudgetCreateSheetState extends State<BudgetCreateSheet> {
               ],
             ),
             const SizedBox(height: 12),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(_error!, style: const TextStyle(color: Colors.red)),
+              ),
             Row(
               children: [
                 TextButton(onPressed: _saving ? null : () => Navigator.pop(context), child: const Text('キャンセル')),
@@ -229,14 +292,25 @@ class _BudgetCreateSheetState extends State<BudgetCreateSheet> {
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = 'budget-${_month.year}-${_month.month.toString().padLeft(2, '0')}';
     final amount = double.tryParse(_amount.text.trim());
-    if (amount == null || amount <= 0) return;
+    if (amount == null || amount <= 0 || _selectedCategoryId == null) {
+      setState(() => _error = 'カテゴリと正しい金額を入力してください');
+      return;
+    }
     setState(() => _saving = true);
-    await prefs.setDouble(key, amount);
-    if (mounted) Navigator.pop(context);
-    setState(() => _saving = false);
+    try {
+      await _budgetRepo.create(
+        categoryId: _selectedCategoryId!,
+        year: _month.year,
+        month: _month.month,
+        amount: amount,
+      );
+      AppState.instance.bumpDataVersion();
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
+      if (mounted) setState(() => _error = '予算の保存に失敗しました');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }
-

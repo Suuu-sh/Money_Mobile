@@ -12,5 +12,39 @@ class CategoryBudgetsRepository {
     final list = (res as List).cast<Map<String, dynamic>>();
     return list.map(CategoryBudget.fromJson).toList();
   }
-}
 
+  Future<CategoryBudget> create({
+    required int categoryId,
+    required int year,
+    required int month,
+    required double amount,
+  }) async {
+    final res = await _api.postJson('/category-budgets', {
+      'categoryId': categoryId,
+      'year': year,
+      'month': month,
+      'amount': amount,
+    });
+    return CategoryBudget.fromJson(res as Map<String, dynamic>);
+  }
+
+  Future<CategoryBudget> update(
+    int id, {
+    required int categoryId,
+    required int year,
+    required int month,
+    required double amount,
+  }) async {
+    final res = await _api.putJson('/category-budgets/$id', {
+      'categoryId': categoryId,
+      'year': year,
+      'month': month,
+      'amount': amount,
+    });
+    return CategoryBudget.fromJson(res as Map<String, dynamic>);
+  }
+
+  Future<void> delete(int id) async {
+    await _api.delete('/category-budgets/$id');
+  }
+}

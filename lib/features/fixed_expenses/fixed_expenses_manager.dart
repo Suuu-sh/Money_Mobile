@@ -127,10 +127,10 @@ class _FixedExpensesManagerSheetState extends State<FixedExpensesManagerSheet> {
 }
 
 class FixedExpenseFormSheet extends StatefulWidget {
-  const FixedExpenseFormSheet({super.key, this.expense, required this.repo});
+  const FixedExpenseFormSheet({super.key, this.expense, this.repo});
 
   final FixedExpense? expense;
-  final FixedExpensesRepository repo;
+  final FixedExpensesRepository? repo;
 
   @override
   State<FixedExpenseFormSheet> createState() => _FixedExpenseFormSheetState();
@@ -173,10 +173,11 @@ class _FixedExpenseFormSheetState extends State<FixedExpenseFormSheet> {
     }
     setState(() => _saving = true);
     try {
+      final repo = widget.repo ?? FixedExpensesRepository(ApiClient());
       if (widget.expense == null) {
-        await widget.repo.create(name: name, amount: amount, type: _type);
+        await repo.create(name: name, amount: amount, type: _type);
       } else {
-        await widget.repo.update(
+        await repo.update(
           widget.expense!.id,
           name: name,
           amount: amount,

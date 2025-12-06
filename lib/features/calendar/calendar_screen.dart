@@ -17,12 +17,13 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   final _repo = TransactionsRepository(ApiClient());
-  DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  late DateTime _currentMonth;
   List<MoneyTransaction> _transactions = [];
   bool _loading = true;
   static const _weekdays = ['月','火','水','木','金','土','日'];
   DateTime? _selectedDate;
   bool _startMonday = true;
+  late final VoidCallback _monthListener;
 
   void _setSelectedDate(DateTime date) {
     AppState.instance.updateQuickEntryDate(date);
@@ -32,9 +33,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
+    _currentMonth = AppState.instance.currentMonth.value;
     _load();
     _loadPrefs();
     AppState.instance.dataVersion.addListener(_onDataChanged);
+    _monthListener = () {
+      final shared = AppState.instance.currentMonth.value;
+      if (shared.year == _currentMonth.year && shared.month == _currentMonth.month) {
+        return;
+      }
+      setState(() => _currentMonth = shared);
+      _load();
+    };
+    AppState.instance.currentMonth.addListener(_monthListener);
   }
 
   String _dateStr(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
@@ -72,17 +83,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _prevMonth() {
-    setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
-    });
-    _load();
+    AppState.instance.setCurrentMonth(DateTime(_currentMonth.year, _currentMonth.month - 1));
   }
 
   void _nextMonth() {
-    setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
-    });
-    _load();
+    AppState.instance.setCurrentMonth(DateTime(_currentMonth.year, _currentMonth.month + 1));
   }
 
   void _onDataChanged() {
@@ -93,6 +98,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void dispose() {
     AppState.instance.dataVersion.removeListener(_onDataChanged);
+    AppState.instance.currentMonth.removeListener(_monthListener);
     super.dispose();
   }
 
@@ -131,42 +137,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
           const SizedBox(height: 6),
 
-          // Scrollable content area to prevent bottom overflow
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 88),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Calendar grid (edge-to-edge)
-                  if (_loading)
-                    const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 24), child: CircularProgressIndicator()))
-                  else
-                    _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
-
-                  // Monthly net summary (between calendar and daily transactions)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: _buildMonthlyNetSummary(context),
-                  ),
-
-                  // Day transactions list (with side padding)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: _buildSelectedDateLabel(context),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _buildDayTransactionsList(),
-                  ),
-                ],
+          // Calendar grid (edge-to-edge)
+          if (_loading)
+            const Expanded(
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else ...[
+            _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: _buildMonthlyNetSummary(context),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _buildSelectedDateLabel(context),
               ),
             ),
-          ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildDayTransactionsList(),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -355,33 +351,81 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }).toList();
 
     if (items.isEmpty) {
-      return const Text('この日に記録された取引はありません', style: TextStyle(color: Colors.grey));
+      return const Center(
+        child: Text('この日に記録された取引はありません',
+            style: TextStyle(color: Colors.grey)),
+      );
     }
     final nf = NumberFormat('#,##0', 'ja_JP');
-    return SizedBox(
-      height: 160,
-      child: ListView.separated(
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const Divider(height: 0),
-        itemBuilder: (context, i) {
-          final t = items[i];
-          final sign = t.type == 'income' ? '+' : '-';
-          final color = t.type == 'income' ? Colors.green : Colors.red;
-          return ListTile(
-            dense: true,
-            title: Text(t.category?.name ?? '(カテゴリ不明)'),
-            subtitle: Text(t.description.isEmpty ? '' : t.description),
-            trailing: Text(
-              '$sign${nf.format(t.amount)}円',
-              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
-            ),
+    return ListView.builder(
+      itemCount: items.length,
+      padding: const EdgeInsets.only(bottom: 24),
+      itemBuilder: (context, index) {
+        final t = items[index];
+        final isIncome = t.type == 'income';
+        final color = isIncome ? Colors.green : Colors.red;
+        final sign = isIncome ? '+' : '-';
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
             onTap: () async {
               final updated = await _openEditTransaction(t);
               if (updated == true) _load();
             },
-          );
-        },
-      ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      isIncome ? Icons.trending_up : Icons.trending_down,
+                      color: color,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t.category?.name ?? '(カテゴリ不明)',
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                        ),
+                        if (t.description.isNotEmpty)
+                          Text(
+                            t.description,
+                            style: TextStyle(
+                              color: Theme.of(context).textTheme.bodySmall?.color,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '$sign${nf.format(t.amount)}円',
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

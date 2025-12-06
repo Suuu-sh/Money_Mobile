@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
+import 'package:money_tracker_mobile/core/app_state.dart';
 import 'package:money_tracker_mobile/features/analysis/analysis_repository.dart';
 import 'package:money_tracker_mobile/features/stats/stats_repository.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
@@ -26,14 +27,31 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   Stats? _stats;
   List<MoneyTransaction> _monthTx = [];
   Map<int, Category> _catMap = {};
-  DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  late DateTime _currentMonth;
   bool _loading = true;
   SpendingPrediction? _prediction;
+  late final VoidCallback _monthListener;
 
   @override
   void initState() {
     super.initState();
+    _currentMonth = AppState.instance.currentMonth.value;
+    _monthListener = () {
+      final shared = AppState.instance.currentMonth.value;
+      if (shared.year == _currentMonth.year && shared.month == _currentMonth.month) {
+        return;
+      }
+      setState(() => _currentMonth = shared);
+      _load();
+    };
+    AppState.instance.currentMonth.addListener(_monthListener);
     _load();
+  }
+
+  @override
+  void dispose() {
+    AppState.instance.currentMonth.removeListener(_monthListener);
+    super.dispose();
   }
 
   String _dateStr(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
@@ -99,11 +117,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               children: [
                 IconButton(
                   onPressed: () {
-                    setState(() {
-                      _currentMonth =
-                          DateTime(_currentMonth.year, _currentMonth.month - 1);
-                    });
-                    _load();
+                    AppState.instance.setCurrentMonth(
+                      DateTime(_currentMonth.year, _currentMonth.month - 1),
+                    );
                   },
                   icon: const Icon(Icons.chevron_left),
                 ),
@@ -112,11 +128,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                         fontSize: 18, fontWeight: FontWeight.bold)),
                 IconButton(
                   onPressed: () {
-                    setState(() {
-                      _currentMonth =
-                          DateTime(_currentMonth.year, _currentMonth.month + 1);
-                    });
-                    _load();
+                    AppState.instance.setCurrentMonth(
+                      DateTime(_currentMonth.year, _currentMonth.month + 1),
+                    );
                   },
                   icon: const Icon(Icons.chevron_right),
                 ),

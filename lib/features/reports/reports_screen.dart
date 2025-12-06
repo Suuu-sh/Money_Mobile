@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
+import 'package:money_tracker_mobile/core/app_state.dart';
 import 'package:money_tracker_mobile/features/stats/stats_repository.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/features/categories/categories_repository.dart';
@@ -21,7 +22,7 @@ class ReportsScreen extends StatefulWidget {
   State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-enum _ViewKind { expense, income, budget }
+enum _ViewKind { summary, expense, income, budget }
 
 class _ReportsScreenState extends State<ReportsScreen> {
   final _statsRepo = StatsRepository(ApiClient());
@@ -34,14 +35,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
   List<FixedExpense> _fixed = [];
   Map<int, Category> _categoryMap = {};
   List<CategoryBudget> _budgets = [];
-  DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
-  _ViewKind _view = _ViewKind.expense;
+  late DateTime _currentMonth;
+  _ViewKind _view = _ViewKind.summary;
   int? _touchedIndex;
+  late final VoidCallback _monthListener;
+  late final VoidCallback _dataListener;
 
   @override
   void initState() {
     super.initState();
+    _currentMonth = AppState.instance.currentMonth.value;
     _future = _statsRepo.fetch();
+    _monthListener = () {
+      final shared = AppState.instance.currentMonth.value;
+      if (shared.year == _currentMonth.year && shared.month == _currentMonth.month) {
+        return;
+      }
+      setState(() => _currentMonth = shared);
+      _loadDetails();
+    };
+    AppState.instance.currentMonth.addListener(_monthListener);
+    _dataListener = () {
+      _loadDetails();
+    };
+    AppState.instance.dataVersion.addListener(_dataListener);
     _loadDetails();
   }
 
@@ -75,13 +92,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
     });
   }
 
-  Future<void> _openFixedManager() async {
-    await showModalBottomSheet(
+  @override
+  void dispose() {
+    AppState.instance.currentMonth.removeListener(_monthListener);
+    AppState.instance.dataVersion.removeListener(_dataListener);
+    super.dispose();
+  }
+
+  Future<void> _openFixedExpenseForm({FixedExpense? expense}) async {
+    final updated = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const FixedExpensesManagerSheet(),
+      builder: (_) => FixedExpenseFormSheet(
+        expense: expense,
+        repo: _fixRepo,
+      ),
     );
-    if (mounted) {
+    if (updated == true && mounted) {
       _loadDetails();
     }
   }
@@ -106,36 +133,43 @@ class _ReportsScreenState extends State<ReportsScreen> {
         final s = snapshot.data!;
         // Aggregate by category (current view)
         final byCategory = <int, double>{};
-        for (final t in _monthTx.where((t) => (_view == _ViewKind.expense ? t.type == 'expense' : t.type == 'income'))) {
-          byCategory[t.categoryId] = (byCategory[t.categoryId] ?? 0) + t.amount;
+        if (_view == _ViewKind.expense || _view == _ViewKind.income) {
+          final filtered = _monthTx.where((t) =>
+              _view == _ViewKind.expense ? t.type == 'expense' : t.type == 'income');
+          for (final t in filtered) {
+            byCategory[t.categoryId] = (byCategory[t.categoryId] ?? 0) + t.amount;
+          }
         }
         final totalSelected = byCategory.values.fold<double>(0, (sum, v) => sum + v);
 
         final sections = <PieChartSectionData>[];
         final nf = NumberFormat('#,##0', 'ja_JP');
-        final entries = byCategory.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-        for (var i = 0; i < entries.length; i++) {
-          final id = entries[i].key;
-          final amount = entries[i].value;
-          if (amount <= 0) continue;
-          final c = _categoryMap[id];
-          final color = c != null ? _parseHex(c.color) : Colors.blueGrey;
-          final isTouched = _touchedIndex == i;
-          final percent = totalSelected == 0 ? 0 : (amount / totalSelected * 100);
-          sections.add(
-            PieChartSectionData(
-              color: color,
-              value: amount,
-              radius: isTouched ? 52 : 44,
-              title: percent >= 5 ? '${percent.toStringAsFixed(0)}%' : '',
-              titleStyle: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
-                fontSize: isTouched ? 12 : 10,
-                fontWeight: FontWeight.w600,
+        if (_view == _ViewKind.expense || _view == _ViewKind.income) {
+          final entries = byCategory.entries.toList()
+            ..sort((a, b) => b.value.compareTo(a.value));
+          for (var i = 0; i < entries.length; i++) {
+            final id = entries[i].key;
+            final amount = entries[i].value;
+            if (amount <= 0) continue;
+            final c = _categoryMap[id];
+            final color = c != null ? _parseHex(c.color) : Colors.blueGrey;
+            final isTouched = _touchedIndex == i;
+            final percent = totalSelected == 0 ? 0 : (amount / totalSelected * 100);
+            sections.add(
+              PieChartSectionData(
+                color: color,
+                value: amount,
+                radius: isTouched ? 52 : 44,
+                title: percent >= 5 ? '${percent.toStringAsFixed(0)}%' : '',
+                titleStyle: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                  fontSize: isTouched ? 12 : 10,
+                  fontWeight: FontWeight.w600,
+                ),
+                titlePositionPercentageOffset: 0.6,
               ),
-              titlePositionPercentageOffset: 0.6,
-            ),
-          );
+            );
+          }
         }
 
         return SafeArea(
@@ -149,15 +183,32 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(onPressed: () { setState(() { _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1); }); _loadDetails(); }, icon: const Icon(Icons.chevron_left)),
+                  IconButton(
+                    onPressed: () {
+                      AppState.instance
+                          .setCurrentMonth(DateTime(_currentMonth.year, _currentMonth.month - 1));
+                    },
+                    icon: const Icon(Icons.chevron_left),
+                  ),
                   Text(DateFormat('yyyy/MM').format(_currentMonth), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  IconButton(onPressed: () { setState(() { _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1); }); _loadDetails(); }, icon: const Icon(Icons.chevron_right)),
+                  IconButton(
+                    onPressed: () {
+                      AppState.instance
+                          .setCurrentMonth(DateTime(_currentMonth.year, _currentMonth.month + 1));
+                    },
+                    icon: const Icon(Icons.chevron_right),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
                 children: [
+                  ChoiceChip(
+                    label: const Text('総計'),
+                    selected: _view == _ViewKind.summary,
+                    onSelected: (_) => setState(() { _view = _ViewKind.summary; _touchedIndex = null; }),
+                  ),
                   ChoiceChip(
                     label: const Text('支出'),
                     selected: _view == _ViewKind.expense,
@@ -175,93 +226,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ],
               ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _openFixedManager,
-                  icon: const Icon(Icons.settings_suggest_outlined),
-                  label: const Text('固定費を設定'),
-                ),
-              ),
               const SizedBox(height: 12),
 
-              // 今月の総計（数字表示）- 固定費も集計に含める
-              _card(
-                title: '今月の総計',
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _metric(
-                        '収入',
-                        nf.format(
-                          s.thisMonthIncome + _fixed.where((f) => f.type == 'income').fold<double>(0, (sum, f) => sum + f.amount),
-                        ),
-                        Colors.green,
-                      ),
-                      const SizedBox(height: 12),
-                      _metric(
-                        '支出',
-                        nf.format(
-                          s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount),
-                        ),
-                        Colors.red,
-                      ),
-                      const SizedBox(height: 12),
-                      _metric(
-                        '収支',
-                        nf.format(
-                          (s.thisMonthIncome + _fixed.where((f) => f.type == 'income').fold<double>(0, (sum, f) => sum + f.amount)) -
-                          (s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount)),
-                        ),
-                        ((s.thisMonthIncome + _fixed.where((f) => f.type == 'income').fold<double>(0, (sum, f) => sum + f.amount)) -
-                         (s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount))) >= 0
-                          ? Colors.green
-                          : Colors.red,
-                      ),
-                    ],
-                  ),
-                ),
+              ..._buildTabContent(
+                s: s,
+                nf: nf,
+                totalSelected: totalSelected,
+                sections: sections,
+                byCategory: byCategory,
               ),
-
-              const SizedBox(height: 16),
-
-              if (_view == _ViewKind.budget)
-                _card(
-                  title: 'カテゴリ別予算',
-                  child: _budgetList(nf),
-                )
-              else
-                _card(
-                  title: _view == _ViewKind.expense ? 'カテゴリ別支出' : 'カテゴリ別収入',
-                  centerText: '合計 ${nf.format(totalSelected)}円',
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: 180,
-                        child: PieChart(
-                          PieChartData(
-                            sections: sections,
-                            sectionsSpace: 2,
-                            centerSpaceRadius: 40,
-                            pieTouchData: PieTouchData(
-                              touchCallback: (event, response) {
-                                if (!event.isInterestedForInteractions || response == null || response.touchedSection == null) {
-                                  setState(() => _touchedIndex = null);
-                                } else {
-                                  setState(() => _touchedIndex = response.touchedSection!.touchedSectionIndex);
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _legend(byCategory),
-                    ],
-                  ),
-                ),
             ],
           ),
         ),
@@ -325,11 +298,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
     return Column(
       children: _budgets.map((b) {
-        final spent = b.actualAmount;
-        final budget = b.budgetAmount;
+        final spent = b.spent;
+        final budget = b.amount;
         final pct = budget <= 0 ? 0.0 : (spent / budget).clamp(0.0, 1.0);
         final over = spent > budget;
         final barColor = over ? Colors.red : Colors.green;
+        final categoryName = b.category?.name ?? '未分類';
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Column(
@@ -337,7 +311,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
             children: [
               Row(
                 children: [
-                  Expanded(child: Text(b.categoryName, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  Expanded(
+                    child: Text(
+                      categoryName,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
                   Text('${nf.format(spent)}円 / ${nf.format(budget)}円', style: const TextStyle(fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -358,6 +337,180 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  List<Widget> _buildTabContent({
+    required Stats s,
+    required NumberFormat nf,
+    required double totalSelected,
+    required List<PieChartSectionData> sections,
+    required Map<int, double> byCategory,
+  }) {
+    switch (_view) {
+      case _ViewKind.summary:
+        return [_buildSummaryCard(s, nf)];
+      case _ViewKind.expense:
+        return [
+          _buildCategoryChartCard(
+            title: 'カテゴリ別支出',
+            nf: nf,
+            totalSelected: totalSelected,
+            sections: sections,
+            byCategory: byCategory,
+          ),
+          const SizedBox(height: 12),
+          _card(title: '固定支出', child: _buildFixedExpenseList()),
+        ];
+      case _ViewKind.income:
+        return [
+          _buildCategoryChartCard(
+            title: 'カテゴリ別収入',
+            nf: nf,
+            totalSelected: totalSelected,
+            sections: sections,
+            byCategory: byCategory,
+          ),
+          const SizedBox(height: 12),
+          _card(title: '固定収入', child: _buildFixedIncomeList()),
+        ];
+      case _ViewKind.budget:
+        return [
+          _card(title: 'カテゴリ別予算', child: _budgetList(nf)),
+        ];
+    }
+  }
+
+  Widget _buildCategoryChartCard({
+    required String title,
+    required NumberFormat nf,
+    required double totalSelected,
+    required List<PieChartSectionData> sections,
+    required Map<int, double> byCategory,
+  }) {
+    return _card(
+      title: title,
+      centerText: '合計 ${nf.format(totalSelected)}円',
+      child: Column(
+        children: [
+          SizedBox(
+            height: 180,
+            child: PieChart(
+              PieChartData(
+                sections: sections,
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
+                pieTouchData: PieTouchData(
+                  touchCallback: (event, response) {
+                    if (!event.isInterestedForInteractions || response == null || response.touchedSection == null) {
+                      setState(() => _touchedIndex = null);
+                    } else {
+                      setState(() => _touchedIndex = response.touchedSection!.touchedSectionIndex);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _legend(byCategory),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(Stats s, NumberFormat nf) {
+    return _card(
+      title: '今月の総計',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _metric(
+            '収入',
+            nf.format(
+              s.thisMonthIncome +
+                  _fixed
+                      .where((f) => f.type == 'income')
+                      .fold<double>(0, (sum, f) => sum + f.amount),
+            ),
+            Colors.green,
+          ),
+          const SizedBox(height: 12),
+          _metric(
+            '支出',
+            nf.format(
+              s.thisMonthExpense +
+                  _fixed
+                      .where((f) => f.type == 'expense')
+                      .fold<double>(0, (sum, f) => sum + f.amount),
+            ),
+            Colors.red,
+          ),
+          const SizedBox(height: 12),
+          _metric(
+            '収支',
+            nf.format(
+              (s.thisMonthIncome +
+                      _fixed
+                          .where((f) => f.type == 'income')
+                          .fold<double>(0, (sum, f) => sum + f.amount)) -
+                  (s.thisMonthExpense +
+                      _fixed
+                          .where((f) => f.type == 'expense')
+                          .fold<double>(0, (sum, f) => sum + f.amount)),
+            ),
+            ((s.thisMonthIncome +
+                        _fixed
+                            .where((f) => f.type == 'income')
+                            .fold<double>(0, (sum, f) => sum + f.amount)) -
+                    (s.thisMonthExpense +
+                        _fixed
+                            .where((f) => f.type == 'expense')
+                            .fold<double>(0, (sum, f) => sum + f.amount))) >=
+                0
+                ? Colors.green
+                : Colors.red,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFixedIncomeList() {
+    final incomes = _fixed.where((f) => f.type == 'income').toList();
+    if (incomes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text('登録された固定収入がありません',
+            style: TextStyle(color: Colors.grey)),
+      );
+    }
+    return Column(
+      children: incomes
+          .map(
+            (f) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(f.name),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${f.amount.toStringAsFixed(0)}円',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: '固定収入を編集',
+                    onPressed: () => _openFixedExpenseForm(expense: f),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
   Widget _metric(String label, String value, Color color) {
     final theme = Theme.of(context);
     return Column(
@@ -370,6 +523,44 @@ class _ReportsScreenState extends State<ReportsScreen> {
           style: theme.textTheme.headlineSmall?.copyWith(color: color, fontWeight: FontWeight.w700),
         ),
       ],
+    );
+  }
+
+  Widget _buildFixedExpenseList() {
+    final expenses = _fixed.where((f) => f.type == 'expense').toList();
+    if (expenses.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text('登録された固定支出がありません',
+            style: TextStyle(color: Colors.grey)),
+      );
+    }
+    return Column(
+      children: expenses
+          .map(
+            (f) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(f.name),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${f.amount.toStringAsFixed(0)}円',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: '固定費を編集',
+                    onPressed: () => _openFixedExpenseForm(expense: f),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }
