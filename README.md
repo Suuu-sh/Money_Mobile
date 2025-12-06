@@ -38,6 +38,23 @@ This is the Flutter mobile client for MoneyTracker.
    flutter run -d chrome --web-port 3000 --dart-define=API_BASE_URL=http://localhost:8000/api
    ```
 
+## テスト用自動ログインの設定
+
+ローカル・テスト環境で毎回ログイン作業を行わないよう、`.env.mobile` にテストユーザーの資格情報を設定するとアプリ起動時に自動ログインできます。
+
+1. サンプルファイルをコピー
+
+   ```bash
+   cd Mobile
+   cp .env.mobile.example .env.mobile
+   ```
+
+2. `.env.mobile` にテスト用メールアドレス/パスワードを記入し、`AUTO_LOGIN_ENABLED=true` を設定します。
+
+> `.env.mobile` は `.gitignore` に含まれているため、認証情報はリポジトリにコミットされません。ビルド時に自動的に読み込まれ、`SecretConfig` 経由でアプリ内に渡されます。
+
+自動ログインを無効にしたい場合は `.env.mobile` の `AUTO_LOGIN_ENABLED` を `false` にするか、ファイルを削除してください。
+
 The app now includes:
 - Auth (login/register) screens with token handling
 - Dashboard with `/stats`
