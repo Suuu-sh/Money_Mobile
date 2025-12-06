@@ -37,6 +37,9 @@ class _InputScreenState extends State<InputScreen> {
     _load();
     if (widget.initialDate != null) {
       _date = widget.initialDate!;
+      AppState.instance.updateQuickEntryDate(_date);
+    } else {
+      AppState.instance.updateQuickEntryDate(_date);
     }
   }
 
@@ -73,6 +76,7 @@ class _InputScreenState extends State<InputScreen> {
         _amountController.clear();
         _descController.clear();
       }
+      AppState.instance.updateQuickEntryDate(_date);
       // クイック入力用途では追加後に閉じる + 通知
       AppState.instance.bumpDataVersion();
       if (mounted && Navigator.of(context).canPop()) {
@@ -176,7 +180,10 @@ class _InputScreenState extends State<InputScreen> {
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
                     );
-                    if (picked != null) setState(() => _date = picked);
+                    if (picked != null) {
+                      setState(() => _date = picked);
+                      AppState.instance.updateQuickEntryDate(picked);
+                    }
                   },
                   child: InputDecorator(
                     decoration: const InputDecoration(labelText: '日付*'),

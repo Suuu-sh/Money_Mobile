@@ -176,23 +176,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 title: '今月の総計',
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(child: _metric(
+                      _metric(
                         '収入',
                         nf.format(
                           s.thisMonthIncome + _fixed.where((f) => f.type == 'income').fold<double>(0, (sum, f) => sum + f.amount),
                         ),
                         Colors.green,
-                      )),
-                      Expanded(child: _metric(
+                      ),
+                      const SizedBox(height: 12),
+                      _metric(
                         '支出',
                         nf.format(
                           s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount),
                         ),
                         Colors.red,
-                      )),
-                      Expanded(child: _metric(
+                      ),
+                      const SizedBox(height: 12),
+                      _metric(
                         '収支',
                         nf.format(
                           (s.thisMonthIncome + _fixed.where((f) => f.type == 'income').fold<double>(0, (sum, f) => sum + f.amount)) -
@@ -202,7 +205,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                          (s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount))) >= 0
                           ? Colors.green
                           : Colors.red,
-                      )),
+                      ),
                     ],
                   ),
                 ),

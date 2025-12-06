@@ -24,6 +24,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime? _selectedDate;
   bool _startMonday = true;
 
+  void _setSelectedDate(DateTime date) {
+    AppState.instance.updateQuickEntryDate(date);
+    setState(() => _selectedDate = date);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -52,11 +57,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
       setState(() {
         _transactions = list;
         // keep selection inside the new month
-        _selectedDate ??= DateTime.now();
-        if (_selectedDate!.year != _currentMonth.year || _selectedDate!.month != _currentMonth.month) {
-          _selectedDate = start;
+        var nextSelected = _selectedDate ?? DateTime.now();
+        if (nextSelected.year != _currentMonth.year || nextSelected.month != _currentMonth.month) {
+          nextSelected = start;
         }
+        _selectedDate = nextSelected;
       });
+      if (_selectedDate != null) {
+        AppState.instance.updateQuickEntryDate(_selectedDate!);
+      }
     } finally {
       setState(() => _loading = false);
     }
@@ -198,7 +207,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final isLastRow = row == totalRows - 1;
 
       return InkWell(
-        onTap: () => setState(() => _selectedDate = date),
+        onTap: () => _setSelectedDate(date),
         child: Container(
           margin: edgeToEdge ? EdgeInsets.zero : const EdgeInsets.all(2),
           padding: const EdgeInsets.all(6),

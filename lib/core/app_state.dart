@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:money_tracker_mobile/models/user.dart';
 
@@ -17,8 +16,17 @@ class AppState {
   final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
   // Data version: bump when transactions/categories/budgets change
   final ValueNotifier<int> dataVersion = ValueNotifier<int>(0);
+  // Last date used/selected when launching quick transaction input
+  DateTime _quickEntryDate = DateTime.now();
 
   void bumpDataVersion() {
     dataVersion.value = dataVersion.value + 1;
+  }
+
+  DateTime get quickEntryDate => _quickEntryDate;
+
+  void updateQuickEntryDate(DateTime date) {
+    // Normalize to midnight to avoid tz drift
+    _quickEntryDate = DateTime(date.year, date.month, date.day);
   }
 }

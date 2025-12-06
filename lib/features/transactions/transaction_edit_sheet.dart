@@ -9,6 +9,7 @@ import 'package:money_tracker_mobile/models/transaction.dart';
 
 class TransactionEditSheet extends StatefulWidget {
   const TransactionEditSheet({super.key, required this.transaction});
+
   final MoneyTransaction transaction;
 
   @override
@@ -19,38 +20,73 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
   final _txRepo = TransactionsRepository(ApiClient());
   final _catRepo = CategoriesRepository(ApiClient());
 
-  final _amount = TextEditingController();
-  final _desc = TextEditingController();
-  DateTime _date = DateTime.now();
-  int? _categoryId;
+  late final TextEditingController _amountController;
+  late final TextEditingController _descriptionController;
+  late DateTime _selectedDate;
   late String _type;
-  List<Category> _cats = [];
+  int? _categoryId;
+  List<Category> _allCategories = [];
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    final t = widget.transaction;
-    _amount.text = t.amount.toStringAsFixed(0);
-    _desc.text = t.description;
-    _date = t.date;
-    _categoryId = t.categoryId;
-    _type = t.type;
-    _loadCats();
+    final tx = widget.transaction;
+    _amountController = TextEditingController(text: tx.amount.toStringAsFixed(0));
+    _descriptionController = TextEditingController(text: tx.description);
+    _selectedDate = tx.date;
+    _type = tx.type;
+    _categoryId = tx.categoryId;
+    _loadCategories();
   }
 
-  Future<void> _loadCats() async {
-    final list = await _catRepo.list();
-    if (!mounted) return;
-    setState(() => _cats = list);
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final list = await _catRepo.list();
+      if (!mounted) return;
+      setState(() {
+        _allCategories = list;
+        final exists = _categoryId != null &&
+            list.any((c) => c.id == _categoryId && c.type == _type);
+        if (!exists) {
+          _categoryId = null;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('カテゴリの取得に失敗しました')),
+      );
+    }
+  }
+
+  void _onTypeChanged(String nextType) {
+    if (_type == nextType) return;
+    setState(() {
+      _type = nextType;
+      final exists = _categoryId != null &&
+          _allCategories.any((c) => c.id == _categoryId && c.type == _type);
+      if (!exists) {
+        _categoryId = null;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final filteredCategories = _allCategories.where((c) => c.type == _type).toList();
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-          left: 16, right: 16,
+          left: 16,
+          right: 16,
           bottom: MediaQuery.of(context).viewInsets.bottom + 16,
           top: 16,
         ),
@@ -63,8 +99,16 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
             Wrap(
               spacing: 8,
               children: [
-                ChoiceChip(label: const Text('収入'), selected: _type == 'income', onSelected: (_) => setState(() => _type = 'income')),
-                ChoiceChip(label: const Text('支出'), selected: _type == 'expense', onSelected: (_) => setState(() => _type = 'expense')),
+                ChoiceChip(
+                  label: const Text('収入'),
+                  selected: _type == 'income',
+                  onSelected: (_) => _onTypeChanged('income'),
+                ),
+                ChoiceChip(
+                  label: const Text('支出'),
+                  selected: _type == 'expense',
+                  onSelected: (_) => _onTypeChanged('expense'),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -72,7 +116,7 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _amount,
+                    controller: _amountController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: '金額'),
                   ),
@@ -83,15 +127,17 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
                     onTap: () async {
                       final picked = await showDatePicker(
                         context: context,
-                        initialDate: _date,
+                        initialDate: _selectedDate,
                         firstDate: DateTime(2000),
                         lastDate: DateTime(2100),
                       );
-                      if (picked != null) setState(() => _date = picked);
+                      if (picked != null) {
+                        setState(() => _selectedDate = picked);
+                      }
                     },
                     child: InputDecorator(
                       decoration: const InputDecoration(labelText: '日付'),
-                      child: Text(DateFormat('yyyy-MM-dd').format(_date)),
+                      child: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
                     ),
                   ),
                 ),
@@ -100,26 +146,34 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
               value: _categoryId,
-              items: _cats
-                  .where((c) => c.type == _type)
-                  .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+              items: filteredCategories
+                  .map((c) => DropdownMenuItem<int>(value: c.id, child: Text(c.name)))
                   .toList(),
-              onChanged: (v) => setState(() => _categoryId = v),
+              onChanged: (value) {
+                setState(() {
+                  _categoryId = value;
+                });
+              },
               decoration: const InputDecoration(labelText: 'カテゴリ'),
             ),
             const SizedBox(height: 8),
             TextField(
-              controller: _desc,
+              controller: _descriptionController,
               decoration: const InputDecoration(labelText: '説明（任意）'),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                TextButton(onPressed: _saving ? null : () => Navigator.pop(context, false), child: const Text('キャンセル')),
+                TextButton(
+                  onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+                  child: const Text('キャンセル'),
+                ),
                 const Spacer(),
                 FilledButton(
                   onPressed: _saving ? null : _save,
-                  child: _saving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('保存'),
+                  child: _saving
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('保存'),
                 ),
               ],
             ),
@@ -130,26 +184,37 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
   }
 
   Future<void> _save() async {
-    final amt = double.tryParse(_amount.text.trim());
-    if (amt == null || amt <= 0 || _categoryId == null) return;
+    final amount = double.tryParse(_amountController.text.trim());
+    final categoryId = _categoryId;
+    if (amount == null || amount <= 0 || categoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('金額とカテゴリを入力してください')),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
     try {
       await _txRepo.update(
         widget.transaction.id,
         type: _type,
-        amount: amt,
-        categoryId: _categoryId,
-        description: _desc.text.trim(),
-        date: _date,
+        amount: amount,
+        categoryId: categoryId,
+        description: _descriptionController.text.trim(),
+        date: _selectedDate,
       );
-      if (mounted) {
-        AppState.instance.bumpDataVersion();
-        Navigator.pop(context, true);
-      }
-    } catch (_) {
-      if (mounted) Navigator.pop(context, false);
+      if (!mounted) return;
+      AppState.instance.bumpDataVersion();
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('保存に失敗しました: $error')),
+      );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 }
