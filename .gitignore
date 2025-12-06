@@ -1,5 +1,7 @@
 # Misc
 .DS_Store
+.env.mobile
+.env.mobile.local
 .dart_tool/
 .packages
 .flutter-plugins
@@ -17,4 +19,3 @@ pubspec.lock
 /macos/
 /windows/
 /web/
-

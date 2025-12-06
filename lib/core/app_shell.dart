@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:money_tracker_mobile/core/app_state.dart';
 import 'package:money_tracker_mobile/features/analysis/analysis_screen.dart';
 import 'package:money_tracker_mobile/features/calendar/calendar_screen.dart';
 import 'package:money_tracker_mobile/features/reports/reports_screen.dart';
@@ -99,6 +100,7 @@ class _AppShellState extends State<AppShell> {
       builder: (ctx) => QuickActionSheet(
         onCreateTransaction: () async {
           Navigator.of(ctx).pop();
+          final initialDate = AppState.instance.quickEntryDate;
           await showModalBottomSheet(
             context: context,
             isScrollControlled: true,
@@ -107,7 +109,7 @@ class _AppShellState extends State<AppShell> {
                 padding: EdgeInsets.only(bottom: MediaQuery.of(inner).viewInsets.bottom),
                 child: SizedBox(
                   height: MediaQuery.of(inner).size.height * 0.8,
-                  child: const InputScreen(),
+                  child: InputScreen(initialDate: initialDate),
                 ),
               ),
             ),

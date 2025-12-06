@@ -6,15 +6,25 @@ import 'package:money_tracker_mobile/features/auth/login_screen.dart';
 import 'package:money_tracker_mobile/core/token_store.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/auth/auth_repository.dart';
-import 'package:money_tracker_mobile/models/user.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:money_tracker_mobile/core/config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await _loadEnv();
   // Initialize intl date symbols for Japanese (used by DateFormat('E'), etc.)
   await initializeDateFormatting('ja');
   runApp(const MoneyTrackerApp());
+}
+
+Future<void> _loadEnv() async {
+  try {
+    await dotenv.load(fileName: '.env.mobile');
+  } catch (e) {
+    debugPrint('Env file not loaded: $e');
+  }
 }
 
 class MoneyTrackerApp extends StatefulWidget {
@@ -56,7 +66,27 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
     } else if (mode == 'system') {
       AppState.instance.themeMode.value = ThemeMode.system;
     }
+    if (AppState.instance.auth.value == null) {
+      await _attemptAutoLogin();
+    }
     if (mounted) setState(() => _bootstrapped = true);
+  }
+
+  Future<void> _attemptAutoLogin() async {
+    if (!SecretConfig.autoLoginEnabled) return;
+    final email = SecretConfig.autoLoginEmail;
+    final password = SecretConfig.autoLoginPassword;
+    if (email == null || password == null) {
+      debugPrint('Auto login enabled but credentials are missing.');
+      return;
+    }
+    try {
+      final authRepo = AuthRepository(ApiClient());
+      final (token, user) = await authRepo.login(email: email, password: password);
+      AppState.instance.auth.value = AuthSession(token: token, user: user);
+    } catch (e) {
+      debugPrint('Auto login failed: $e');
+    }
   }
 
   @override

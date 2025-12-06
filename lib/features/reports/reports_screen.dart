@@ -8,6 +8,7 @@ import 'package:money_tracker_mobile/features/categories/categories_repository.d
 import 'package:money_tracker_mobile/models/stats.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
 import 'package:money_tracker_mobile/features/fixed_expenses/fixed_expenses_repository.dart';
+import 'package:money_tracker_mobile/features/fixed_expenses/fixed_expenses_manager.dart';
 import 'package:money_tracker_mobile/models/fixed_expense.dart';
 import 'package:money_tracker_mobile/models/category.dart';
 import 'package:money_tracker_mobile/features/budgets/category_budgets_repository.dart';
@@ -74,6 +75,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
     });
   }
 
+  Future<void> _openFixedManager() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const FixedExpensesManagerSheet(),
+    );
+    if (mounted) {
+      _loadDetails();
+    }
+  }
+
   Color _parseHex(String hex, {int alpha = 0xFF}) {
     final cleaned = hex.replaceFirst('#', '');
     final val = int.tryParse(cleaned, radix: 16) ?? 0x999999;
@@ -126,12 +138,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
           );
         }
 
-        // Monthly total pie (expense vs income)
-        final expVsIncome = [
-          PieChartSectionData(color: Colors.redAccent, value: s.thisMonthExpense <= 0 ? 0.01 : s.thisMonthExpense, title: '', radius: 44),
-          PieChartSectionData(color: Colors.green, value: s.thisMonthIncome <= 0 ? 0.01 : s.thisMonthIncome, title: '', radius: 44),
-        ];
-
         return SafeArea(
           top: true,
           bottom: false,
@@ -169,6 +175,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ],
               ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _openFixedManager,
+                  icon: const Icon(Icons.settings_suggest_outlined),
+                  label: const Text('固定費を設定'),
+                ),
+              ),
               const SizedBox(height: 12),
 
               // 今月の総計（数字表示）- 固定費も集計に含める
@@ -176,23 +190,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 title: '今月の総計',
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(child: _metric(
+                      _metric(
                         '収入',
                         nf.format(
                           s.thisMonthIncome + _fixed.where((f) => f.type == 'income').fold<double>(0, (sum, f) => sum + f.amount),
                         ),
                         Colors.green,
-                      )),
-                      Expanded(child: _metric(
+                      ),
+                      const SizedBox(height: 12),
+                      _metric(
                         '支出',
                         nf.format(
                           s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount),
                         ),
                         Colors.red,
-                      )),
-                      Expanded(child: _metric(
+                      ),
+                      const SizedBox(height: 12),
+                      _metric(
                         '収支',
                         nf.format(
                           (s.thisMonthIncome + _fixed.where((f) => f.type == 'income').fold<double>(0, (sum, f) => sum + f.amount)) -
@@ -202,7 +219,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                          (s.thisMonthExpense + _fixed.where((f) => f.type == 'expense').fold<double>(0, (sum, f) => sum + f.amount))) >= 0
                           ? Colors.green
                           : Colors.red,
-                      )),
+                      ),
                     ],
                   ),
                 ),
