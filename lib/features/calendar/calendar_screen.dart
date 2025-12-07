@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:money_tracker_mobile/features/transactions/transactions_repository.dart';
 import 'package:money_tracker_mobile/models/transaction.dart';
 import 'package:money_tracker_mobile/features/transactions/transaction_edit_sheet.dart';
+import 'package:money_tracker_mobile/core/category_icons.dart';
 // import removed: input is opened from global FAB
 
 class CalendarScreen extends StatefulWidget {
@@ -24,11 +25,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime? _selectedDate;
   bool _startMonday = true;
   late final VoidCallback _monthListener;
+  final Map<String, DateTime> _selectedDays = {};
 
   void _setSelectedDate(DateTime date) {
+    final key = _monthKey(date);
+    _selectedDays[key] = date;
     AppState.instance.updateQuickEntryDate(date);
     setState(() => _selectedDate = date);
   }
+
+  String _monthKey(DateTime date) => '${date.year}-${date.month.toString().padLeft(2, '0')}';
 
   @override
   void initState() {
@@ -67,12 +73,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
       setState(() {
         _transactions = list;
-        // keep selection inside the new month
-        var nextSelected = _selectedDate ?? DateTime.now();
-        if (nextSelected.year != _currentMonth.year || nextSelected.month != _currentMonth.month) {
-          nextSelected = start;
+        final key = _monthKey(_currentMonth);
+        final saved = _selectedDays[key];
+        DateTime resolved;
+        if (saved != null && saved.year == _currentMonth.year && saved.month == _currentMonth.month) {
+          resolved = saved;
+        } else if (_selectedDate != null &&
+            _selectedDate!.year == _currentMonth.year &&
+            _selectedDate!.month == _currentMonth.month) {
+          resolved = _selectedDate!;
+        } else {
+          resolved = start;
+          _selectedDays[key] = resolved;
         }
-        _selectedDate = nextSelected;
+        _selectedDate = resolved;
       });
       if (_selectedDate != null) {
         AppState.instance.updateQuickEntryDate(_selectedDate!);
@@ -107,63 +121,92 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final onSurface = theme.colorScheme.onSurface;
-    final borderColor = theme.colorScheme.outlineVariant; // align to frontend slate tone
+    final borderColor = theme.colorScheme.outlineVariant;
     final selectedBorder = theme.colorScheme.primary;
     final selectedBg = theme.colorScheme.primary.withOpacity(isDark ? 0.12 : 0.06);
-    final weekdayStyle = TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B));
-    return SafeArea(
-      top: true,
-      bottom: false,
-      child: Column(
-        children: [
-          // Header (with side padding)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(onPressed: _prevMonth, icon: const Icon(Icons.chevron_left)),
-                Text(DateFormat('yyyy/MM').format(_currentMonth), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                IconButton(onPressed: _nextMonth, icon: const Icon(Icons.chevron_right)),
-              ],
+    final weekdayStyle = TextStyle(
+      color: isDark ? const Color(0xFFB4A5D9) : const Color(0xFF9575CD),
+      fontWeight: FontWeight.w600,
+      fontSize: 11,
+    );
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDark
+              ? [const Color(0xFF1A1625), const Color(0xFF0F0B1A)]
+              : [const Color(0xFFFFF5F7), const Color(0xFFF3E5F5)],
+        ),
+      ),
+      child: SafeArea(
+        top: true,
+        bottom: false,
+        child: Column(
+          children: [
+            // Header with cute styling - 統一サイズ
+            _buildMonthHeader(context, isDark),
+            // Weekday header - 縦幅を小さく
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: (_startMonday ? _weekdays : ['日','月','火','水','木','金','土'])
+                    .map((label) => Expanded(child: Center(child: Text(label, style: weekdayStyle))))
+                    .toList(),
+              ),
             ),
-          ),
-          // Weekday header (edge-to-edge)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: (_startMonday ? _weekdays : ['日','月','火','水','木','金','土'])
-                .map((label) => Expanded(child: Center(child: Text(label, style: weekdayStyle))))
-                .toList(),
-          ),
-          const SizedBox(height: 6),
 
-          // Calendar grid (edge-to-edge)
-          if (_loading)
-            const Expanded(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else ...[
-            _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: _buildMonthlyNetSummary(context),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _buildSelectedDateLabel(context),
+            // Calendar grid with swipe
+            if (_loading)
+              const Expanded(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else ...[
+              GestureDetector(
+                onHorizontalDragEnd: (details) {
+                  if (details.primaryVelocity! > 0) {
+                    _prevMonth();
+                  } else if (details.primaryVelocity! < 0) {
+                    _nextMonth();
+                  }
+                },
+                child: _buildCalendarGrid(edgeToEdge: true, shrinkWrap: true),
               ),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildDayTransactionsList(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: _buildMonthlyNetSummary(context),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _buildSelectedDateLabel(context),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onHorizontalDragEnd: (details) {
+                    if (_selectedDate == null) return;
+                    if (details.primaryVelocity! > 0) {
+                      // 前の日
+                      _setSelectedDate(_selectedDate!.subtract(const Duration(days: 1)));
+                    } else if (details.primaryVelocity! < 0) {
+                      // 次の日
+                      _setSelectedDate(_selectedDate!.add(const Duration(days: 1)));
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildDayTransactionsList(),
+                  ),
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -192,9 +235,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
       final theme = Theme.of(context);
       final isDark = theme.brightness == Brightness.dark;
-      final gridColor = _isSameDay(_selectedDate, date)
-          ? theme.colorScheme.primary
-          : theme.colorScheme.outlineVariant;
+      final mainColor = isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0);
+      final isSelected = _isSameDay(_selectedDate, date);
+      final gridColor = isSelected ? mainColor.withOpacity(0.6) : theme.colorScheme.outlineVariant;
       final col = i % 7;
       final row = i ~/ 7;
       final totalRows = (totalCells / 7).ceil();
@@ -202,86 +245,102 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final isLastCol = col == 6;
       final isLastRow = row == totalRows - 1;
 
-      return InkWell(
-        onTap: () => _setSelectedDate(date),
-        child: Container(
-          margin: edgeToEdge ? EdgeInsets.zero : const EdgeInsets.all(2),
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: _isSameDay(_selectedDate, date)
-                ? theme.colorScheme.primary.withOpacity(isDark ? 0.12 : 0.06)
-                : null,
-            border: _isSameDay(_selectedDate, date)
-                // 選択時は四辺すべて色付きで囲む
-                ? Border.all(color: theme.colorScheme.primary, width: 1)
-                // 非選択時は従来の内側のみ線
-                : Border(
-                    left: BorderSide(
-                      color: isFirstCol ? Colors.transparent : gridColor,
-                      width: isFirstCol ? 0 : (edgeToEdge ? 0.5 : 1),
-                    ),
-                    right: BorderSide(
-                      color: isLastCol ? Colors.transparent : gridColor,
-                      width: isLastCol ? 0 : (edgeToEdge ? 0.5 : 1),
-                    ),
-                    top: BorderSide(
-                      color: row == 0 ? gridColor : Colors.transparent,
-                      width: row == 0 ? (edgeToEdge ? 0.5 : 1) : 0,
-                    ),
-                    bottom: BorderSide(
-                      color: gridColor,
-                      width: edgeToEdge ? 0.5 : 1,
-                    ),
-                  ),
-            borderRadius: edgeToEdge ? BorderRadius.zero : BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${date.day}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                  color: isCurrent ? Theme.of(context).colorScheme.onSurface : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8)),
+      return AspectRatio(
+        aspectRatio: 1,
+        child: InkWell(
+          onTap: () => _setSelectedDate(date),
+          child: Container(
+            margin: edgeToEdge ? EdgeInsets.zero : const EdgeInsets.all(2),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              gradient: isSelected
+                  ? LinearGradient(
+                      colors: isDark
+                          ? [mainColor.withOpacity(0.16), mainColor.withOpacity(0.08)]
+                          : [mainColor.withOpacity(0.1), mainColor.withOpacity(0.04)],
+                    )
+                  : null,
+              border: Border(
+                left: BorderSide(
+                  color: isFirstCol ? Colors.transparent : gridColor,
+                  width: isFirstCol ? 0 : (edgeToEdge ? 0.5 : 1),
+                ),
+                right: BorderSide(
+                  color: isLastCol ? Colors.transparent : gridColor,
+                  width: isLastCol ? 0 : (edgeToEdge ? 0.5 : 1),
+                ),
+                top: BorderSide(
+                  color: row == 0 ? gridColor : gridColor.withOpacity(0.7),
+                  width: edgeToEdge ? 0.5 : 1,
+                ),
+                bottom: BorderSide(
+                  color: gridColor,
+                  width: edgeToEdge ? 0.5 : 1,
                 ),
               ),
-              const SizedBox(height: 2),
-              // Show both income (green) and expense (red) if they exist.
-              if (income > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.24 : 0.08),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '${income.toStringAsFixed(0)}円',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.green.shade300 : Colors.green.shade700, fontSize: 9, fontWeight: FontWeight.w600),
+              borderRadius: edgeToEdge ? BorderRadius.zero : BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${date.day}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    color: isCurrent
+                        ? Theme.of(context).colorScheme.onSurface
+                        : (Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFF94A3B8)),
                   ),
                 ),
-              if (expense > 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+                const SizedBox(height: 1),
+                if (income > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0.5),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.24 : 0.08),
-                      borderRadius: BorderRadius.circular(6),
+                      color: Colors.green.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.24 : 0.08),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      '${expense.toStringAsFixed(0)}円',
+                      '${income.toStringAsFixed(0)}円',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.red.shade300 : Colors.red.shade700, fontSize: 9, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.green.shade300
+                            : Colors.green.shade700,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-              if (expense == 0 && income == 0)
-                const SizedBox.shrink(),
-            ],
+                if (expense > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0.5),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.24 : 0.08),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${expense.toStringAsFixed(0)}円',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.red.shade300
+                              : Colors.red.shade700,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       );
@@ -289,7 +348,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return GridView.count(
       crossAxisCount: 7,
-      childAspectRatio: 0.90,
+      childAspectRatio: 1,
       mainAxisSpacing: edgeToEdge ? 0 : 4,
       crossAxisSpacing: edgeToEdge ? 0 : 4,
       padding: EdgeInsets.zero,
@@ -304,6 +363,60 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
+  Widget _buildMonthHeader(BuildContext context, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: IconButton(
+              onPressed: _prevMonth,
+              icon: const Icon(Icons.chevron_left, size: 20),
+              color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+            ),
+          ),
+          Row(
+            children: [
+              Icon(Icons.calendar_today_rounded, 
+                size: 16, 
+                color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                DateFormat('yyyy年 MM月').format(_currentMonth),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                ),
+              ),
+            ],
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: IconButton(
+              onPressed: _nextMonth,
+              icon: const Icon(Icons.chevron_right, size: 20),
+              color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMonthlyNetSummary(BuildContext context) {
     // Compute monthly totals from currently loaded transactions
     double income = 0, expense = 0;
@@ -313,30 +426,65 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
     final net = income - expense;
     final nf = NumberFormat('#,##0', 'ja_JP');
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    Widget metric(String label, String value, Color color) {
-      final theme = Theme.of(context);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
-          const SizedBox(height: 2),
-          Text('$value円', style: theme.textTheme.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700)),
-        ],
+    Widget metric(String label, String value, Color color, IconData icon) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [color.withOpacity(0.2), color.withOpacity(0.1)]
+                : [color.withOpacity(0.15), color.withOpacity(0.05)],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 12, color: color),
+                const SizedBox(width: 2),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? color.withOpacity(0.9) : color,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$value円',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
       );
     }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Expanded(child: metric('収入', nf.format(income), Colors.green)),
-            Expanded(child: metric('支出', nf.format(expense), Colors.red)),
-            Expanded(child: metric('総収支', nf.format(net), net >= 0 ? Colors.green : Colors.red)),
-          ],
-        ),
-      ),
+    return Row(
+      children: [
+        Expanded(child: metric('収入', nf.format(income), const Color(0xFF66BB6A), Icons.arrow_circle_up_rounded)),
+        const SizedBox(width: 6),
+        Expanded(child: metric('支出', nf.format(expense), const Color(0xFFEF5350), Icons.arrow_circle_down_rounded)),
+        const SizedBox(width: 6),
+        Expanded(child: metric('収支', nf.format(net), net >= 0 ? const Color(0xFF66BB6A) : const Color(0xFFEF5350), Icons.account_balance_wallet_rounded)),
+      ],
     );
   }
 
@@ -349,11 +497,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final d = t.date.toLocal();
       return d.year == date.year && d.month == date.month && d.day == date.day;
     }).toList();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     if (items.isEmpty) {
-      return const Center(
-        child: Text('この日に記録された取引はありません',
-            style: TextStyle(color: Colors.grey)),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inbox_rounded,
+              size: 64,
+              color: isDark ? Colors.white.withOpacity(0.2) : Colors.grey.withOpacity(0.3),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'この日に記録された取引はありません',
+              style: TextStyle(
+                color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       );
     }
     final nf = NumberFormat('#,##0', 'ja_JP');
@@ -363,20 +529,53 @@ class _CalendarScreenState extends State<CalendarScreen> {
       itemBuilder: (context, index) {
         final t = items[index];
         final isIncome = t.type == 'income';
-        final color = isIncome ? Colors.green : Colors.red;
         final sign = isIncome ? '+' : '-';
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        // カテゴリの色とアイコンを取得
+        final categoryColor = t.category != null 
+            ? _parseHex(t.category!.color)
+            : (isIncome ? const Color(0xFF66BB6A) : const Color(0xFFEF5350));
+        final categoryIcon = t.category != null && t.category!.icon.isNotEmpty
+            ? _getCategoryIcon(t.category!.icon)
+            : _guessIcon(t.category?.name ?? '', t.type);
+        final cardGradientColors = isDark
+            ? [const Color(0xFF1A1625).withOpacity(0.95), const Color(0xFF0F0B1A).withOpacity(0.9)]
+            : [const Color(0xFFFFF5F7), const Color(0xFFF3E5F5)];
+        final cardBorderColor = isDark
+            ? const Color(0xFFE1BEE7).withOpacity(0.2)
+            : const Color(0xFF9C27B0).withOpacity(0.2);
+        final iconContainerColor = isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.95);
+        final iconBorderColor = isDark ? Colors.white.withOpacity(0.2) : const Color(0xFF9C27B0).withOpacity(0.3);
+        final amountColor = isIncome ? const Color(0xFF66BB6A) : const Color(0xFFEF5350);
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: cardGradientColors,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: cardBorderColor,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: (isDark ? Colors.black : Colors.grey).withOpacity(0.12),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             onTap: () async {
               final updated = await _openEditTransaction(t);
               if (updated == true) _load();
             },
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -384,29 +583,38 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.12),
+                      color: iconContainerColor,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: iconBorderColor, width: 1.5),
                     ),
                     child: Icon(
-                      isIncome ? Icons.trending_up : Icons.trending_down,
-                      color: color,
+                      categoryIcon,
+                      color: categoryColor,
                       size: 20,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           t.category?.name ?? '(カテゴリ不明)',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: categoryColor,
+                          ),
                         ),
                         if (t.description.isNotEmpty)
-                          Text(
-                            t.description,
-                            style: TextStyle(
-                              color: Theme.of(context).textTheme.bodySmall?.color,
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              t.description,
+                              style: TextStyle(
+                                color: isDark ? Colors.white.withOpacity(0.6) : Colors.black54,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                       ],
@@ -415,9 +623,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   Text(
                     '$sign${nf.format(t.amount)}円',
                     style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      color: amountColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
                     ),
                   ),
                 ],
@@ -437,7 +645,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // Build selected date label with gray parentheses in dark theme
+  // Build selected date label with cute styling
   Widget _buildSelectedDateLabel(BuildContext context) {
     if (_selectedDate == null) {
       return const Text('取引', style: TextStyle(fontWeight: FontWeight.bold));
@@ -445,18 +653,52 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final d = _selectedDate!;
     final main = DateFormat('yyyy/MM/dd', 'ja').format(d);
     final week = DateFormat('E', 'ja').format(d);
-    final baseStyle = const TextStyle(fontWeight: FontWeight.bold);
-    final parenStyle = baseStyle.copyWith(color: Colors.grey);
-    return RichText(
-      text: TextSpan(
-        style: DefaultTextStyle.of(context).style.merge(baseStyle),
-        children: [
-          TextSpan(text: main),
-          TextSpan(text: '（', style: parenStyle),
-          TextSpan(text: week),
-          TextSpan(text: '）', style: parenStyle),
-        ],
-      ),
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return Row(
+      children: [
+        Icon(
+          Icons.event_note_rounded,
+          size: 16,
+          color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+        ),
+        const SizedBox(width: 6),
+        RichText(
+          text: TextSpan(
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+            ),
+            children: [
+              TextSpan(text: main),
+              TextSpan(
+                text: ' ($week)',
+                style: TextStyle(
+                  color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
+  }
+
+  Color _parseHex(String hex, {int alpha = 0xFF}) {
+    final cleaned = hex.replaceFirst('#', '');
+    final val = int.tryParse(cleaned, radix: 16) ?? 0x999999;
+    return Color((alpha << 24) | val);
+  }
+
+  IconData _getCategoryIcon(String iconName) {
+    return CategoryIcons.getIcon(iconName);
+  }
+
+  IconData _guessIcon(String categoryName, String type) {
+    return CategoryIcons.guessIcon(categoryName, type);
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/categories/categories_repository.dart';
 import 'package:money_tracker_mobile/models/category.dart';
+import 'package:money_tracker_mobile/core/category_icons.dart';
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
@@ -59,12 +60,54 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               if (items.isEmpty) return const Center(child: Text('カテゴリがありません'));
               return ListView.builder(
                 itemCount: items.length,
+                padding: const EdgeInsets.all(8),
                 itemBuilder: (context, i) {
                   final c = items[i];
-                  return ListTile(
-                    leading: CircleAvatar(backgroundColor: _parseColor(c.color)),
-                    title: Text(c.name),
-                    subtitle: Text(c.type),
+                  final color = _parseColor(c.color);
+                  final icon = c.icon.isNotEmpty 
+                      ? CategoryIcons.getIcon(c.icon)
+                      : CategoryIcons.guessIcon(c.name, c.type);
+                  
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+                    ),
+                    child: ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, color: color, size: 24),
+                      ),
+                      title: Text(
+                        c.name,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Text(
+                        c.type == 'income' ? '収入' : '支出',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          c.color,
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
                   );
                 },
               );

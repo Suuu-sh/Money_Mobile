@@ -14,6 +14,7 @@ import 'package:money_tracker_mobile/models/fixed_expense.dart';
 import 'package:money_tracker_mobile/models/category.dart';
 import 'package:money_tracker_mobile/features/budgets/category_budgets_repository.dart';
 import 'package:money_tracker_mobile/models/category_budget.dart';
+import 'package:money_tracker_mobile/core/category_icons.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -121,6 +122,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return FutureBuilder<Stats>(
       future: _future,
       builder: (context, snapshot) {
@@ -159,12 +163,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
               PieChartSectionData(
                 color: color,
                 value: amount,
-                radius: isTouched ? 52 : 44,
+                radius: isTouched ? 58 : 50,
                 title: percent >= 5 ? '${percent.toStringAsFixed(0)}%' : '',
                 titleStyle: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
-                  fontSize: isTouched ? 12 : 10,
-                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  fontSize: isTouched ? 13 : 11,
+                  fontWeight: FontWeight.w700,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.5),
+                      blurRadius: 4,
+                    ),
+                  ],
                 ),
                 titlePositionPercentageOffset: 0.6,
               ),
@@ -172,93 +182,247 @@ class _ReportsScreenState extends State<ReportsScreen> {
           }
         }
 
-        return SafeArea(
-          top: true,
-          bottom: false,
-          child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: ListView(
-            children: [
-              // Month selector + toggle
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      AppState.instance
-                          .setCurrentMonth(DateTime(_currentMonth.year, _currentMonth.month - 1));
-                    },
-                    icon: const Icon(Icons.chevron_left),
-                  ),
-                  Text(DateFormat('yyyy/MM').format(_currentMonth), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  IconButton(
-                    onPressed: () {
-                      AppState.instance
-                          .setCurrentMonth(DateTime(_currentMonth.year, _currentMonth.month + 1));
-                    },
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: const Text('総計'),
-                    selected: _view == _ViewKind.summary,
-                    onSelected: (_) => setState(() { _view = _ViewKind.summary; _touchedIndex = null; }),
-                  ),
-                  ChoiceChip(
-                    label: const Text('支出'),
-                    selected: _view == _ViewKind.expense,
-                    onSelected: (_) => setState(() { _view = _ViewKind.expense; _touchedIndex = null; }),
-                  ),
-                  ChoiceChip(
-                    label: const Text('収入'),
-                    selected: _view == _ViewKind.income,
-                    onSelected: (_) => setState(() { _view = _ViewKind.income; _touchedIndex = null; }),
-                  ),
-                  ChoiceChip(
-                    label: const Text('予算'),
-                    selected: _view == _ViewKind.budget,
-                    onSelected: (_) => setState(() { _view = _ViewKind.budget; _touchedIndex = null; }),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              ..._buildTabContent(
-                s: s,
-                nf: nf,
-                totalSelected: totalSelected,
-                sections: sections,
-                byCategory: byCategory,
-              ),
-            ],
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isDark
+                  ? [const Color(0xFF1A1625), const Color(0xFF0F0B1A)]
+                  : [const Color(0xFFFFF5F7), const Color(0xFFF3E5F5)],
+            ),
           ),
-        ),
+          child: SafeArea(
+            top: true,
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: ListView(
+                children: [
+                  // Month selector - 統一サイズ
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              AppState.instance
+                                  .setCurrentMonth(DateTime(_currentMonth.year, _currentMonth.month - 1));
+                            },
+                            icon: const Icon(Icons.chevron_left, size: 20),
+                            color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                            padding: const EdgeInsets.all(8),
+                            constraints: const BoxConstraints(),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Icon(Icons.bar_chart_rounded, 
+                              size: 16, 
+                              color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              DateFormat('yyyy年 MM月').format(_currentMonth),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              AppState.instance
+                                  .setCurrentMonth(DateTime(_currentMonth.year, _currentMonth.month + 1));
+                            },
+                            icon: const Icon(Icons.chevron_right, size: 20),
+                            color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                            padding: const EdgeInsets.all(8),
+                            constraints: const BoxConstraints(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildCuteChip('総計', Icons.summarize_rounded, _view == _ViewKind.summary, () {
+                          setState(() { _view = _ViewKind.summary; _touchedIndex = null; });
+                        }),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCuteChip('支出', Icons.arrow_circle_down_rounded, _view == _ViewKind.expense, () {
+                          setState(() { _view = _ViewKind.expense; _touchedIndex = null; });
+                        }),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCuteChip('収入', Icons.arrow_circle_up_rounded, _view == _ViewKind.income, () {
+                          setState(() { _view = _ViewKind.income; _touchedIndex = null; });
+                        }),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCuteChip('予算', Icons.account_balance_wallet_rounded, _view == _ViewKind.budget, () {
+                          setState(() { _view = _ViewKind.budget; _touchedIndex = null; });
+                        }),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  ..._buildTabContent(
+                    s: s,
+                    nf: nf,
+                    totalSelected: totalSelected,
+                    sections: sections,
+                    byCategory: byCategory,
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _card({required String title, required Widget child, String? centerText}) {
+  Widget _buildCuteChip(String label, IconData icon, bool selected, VoidCallback onTap) {
     final theme = Theme.of(context);
-    return Card(
+    final isDark = theme.brightness == Brightness.dark;
+    final color = isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0);
+    
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: selected
+              ? LinearGradient(
+                  colors: isDark
+                      ? [color.withOpacity(0.3), color.withOpacity(0.2)]
+                      : [color.withOpacity(0.2), color.withOpacity(0.1)],
+                )
+              : null,
+          color: selected ? null : (isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.7)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? color.withOpacity(0.5) : (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.3)),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: selected ? color : (isDark ? Colors.white70 : Colors.black54)),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: TextStyle(
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  fontSize: 14,
+                  color: selected ? color : (isDark ? Colors.white70 : Colors.black54),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _card({required String title, required Widget child, String? centerText, IconData? icon}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xFF9C27B0).withOpacity(0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0)).withOpacity(0.1),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             Stack(
               alignment: Alignment.center,
               children: [
                 child,
                 if (centerText != null)
-                  Text(centerText, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.black.withOpacity(0.6) : Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFFE1BEE7).withOpacity(0.3) : const Color(0xFF9C27B0).withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      centerText,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ],
@@ -269,19 +433,58 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _legend(Map<int, double> byCategory) {
     final entries = byCategory.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Column(
       children: entries.map((e) {
         final cat = _categoryMap[e.key];
         final color = cat != null ? _parseHex(cat.color) : Colors.blueGrey;
         final name = cat?.name ?? '未分類';
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark ? color.withOpacity(0.15) : color.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withOpacity(0.3), width: 1),
+          ),
           child: Row(
             children: [
-              Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-              const SizedBox(width: 8),
-              Expanded(child: Text(name)),
-              Text('${e.value.toStringAsFixed(0)}円', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.4),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+              Text(
+                '${e.value.toStringAsFixed(0)}円',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: color,
+                ),
+              ),
             ],
           ),
         );
@@ -356,8 +559,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
             sections: sections,
             byCategory: byCategory,
           ),
-          const SizedBox(height: 12),
-          _card(title: '固定支出', child: _buildFixedExpenseList()),
+          const SizedBox(height: 16),
+          _card(
+            title: '固定支出',
+            icon: Icons.repeat_rounded,
+            child: _buildFixedExpenseList(),
+          ),
         ];
       case _ViewKind.income:
         return [
@@ -368,12 +575,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
             sections: sections,
             byCategory: byCategory,
           ),
-          const SizedBox(height: 12),
-          _card(title: '固定収入', child: _buildFixedIncomeList()),
+          const SizedBox(height: 16),
+          _card(
+            title: '固定収入',
+            icon: Icons.repeat_rounded,
+            child: _buildFixedIncomeList(),
+          ),
         ];
       case _ViewKind.budget:
         return [
-          _card(title: 'カテゴリ別予算', child: _budgetList(nf)),
+          _card(
+            title: 'カテゴリ別予算',
+            icon: Icons.account_balance_wallet_rounded,
+            child: _budgetList(nf),
+          ),
         ];
     }
   }
@@ -387,16 +602,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }) {
     return _card(
       title: title,
+      icon: title.contains('支出') ? Icons.pie_chart_rounded : Icons.donut_large_rounded,
       centerText: '合計 ${nf.format(totalSelected)}円',
       child: Column(
         children: [
           SizedBox(
-            height: 180,
+            height: 200,
             child: PieChart(
               PieChartData(
                 sections: sections,
-                sectionsSpace: 2,
-                centerSpaceRadius: 40,
+                sectionsSpace: 3,
+                centerSpaceRadius: 50,
                 pieTouchData: PieTouchData(
                   touchCallback: (event, response) {
                     if (!event.isInterestedForInteractions || response == null || response.touchedSection == null) {
@@ -409,7 +625,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           _legend(byCategory),
         ],
       ),
@@ -419,6 +635,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _buildSummaryCard(Stats s, NumberFormat nf) {
     return _card(
       title: '今月の総計',
+      icon: Icons.summarize_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -430,7 +647,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       .where((f) => f.type == 'income')
                       .fold<double>(0, (sum, f) => sum + f.amount),
             ),
-            Colors.green,
+            const Color(0xFF66BB6A),
+            Icons.arrow_circle_up_rounded,
           ),
           const SizedBox(height: 12),
           _metric(
@@ -441,7 +659,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       .where((f) => f.type == 'expense')
                       .fold<double>(0, (sum, f) => sum + f.amount),
             ),
-            Colors.red,
+            const Color(0xFFEF5350),
+            Icons.arrow_circle_down_rounded,
           ),
           const SizedBox(height: 12),
           _metric(
@@ -465,8 +684,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             .where((f) => f.type == 'expense')
                             .fold<double>(0, (sum, f) => sum + f.amount))) >=
                 0
-                ? Colors.green
-                : Colors.red,
+                ? const Color(0xFF66BB6A)
+                : const Color(0xFFEF5350),
+            Icons.account_balance_wallet_rounded,
           ),
         ],
       ),
@@ -484,45 +704,68 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
     return Column(
       children: incomes
-          .map(
-            (f) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(f.name),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${f.amount.toStringAsFixed(0)}円',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    tooltip: '固定収入を編集',
-                    onPressed: () => _openFixedExpenseForm(expense: f),
-                  ),
-                ],
-              ),
-            ),
-          )
+          .map((f) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: _buildFixedExpenseCard(f),
+              ))
           .toList(),
     );
   }
 
-  Widget _metric(String label, String value, Color color) {
+  Widget _metric(String label, String value, Color color, IconData icon) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
-        const SizedBox(height: 4),
-        Text(
-          '$value円',
-          style: theme.textTheme.headlineSmall?.copyWith(color: color, fontWeight: FontWeight.w700),
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [color.withOpacity(0.2), color.withOpacity(0.1)]
+              : [color.withOpacity(0.15), color.withOpacity(0.05)],
         ),
-      ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? color.withOpacity(0.9) : color,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$value円',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -537,30 +780,121 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
     return Column(
       children: expenses
-          .map(
-            (f) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(f.name),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${f.amount.toStringAsFixed(0)}円',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    tooltip: '固定費を編集',
-                    onPressed: () => _openFixedExpenseForm(expense: f),
-                  ),
-                ],
-              ),
-            ),
-          )
+          .map((f) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: _buildFixedExpenseCard(f),
+              ))
           .toList(),
+    );
+  }
+
+  Widget _buildFixedExpenseCard(FixedExpense f) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isIncome = f.type == 'income';
+    final amountColor = isIncome ? const Color(0xFF66BB6A) : const Color(0xFFEF5350);
+    final categoryColor = f.category != null
+        ? _parseHex(f.category!.color)
+        : amountColor;
+    final iconData = f.category != null && f.category!.icon.isNotEmpty
+        ? CategoryIcons.getIcon(f.category!.icon)
+        : CategoryIcons.guessIcon(f.category?.name ?? f.name, f.type);
+
+    final cardGradient = isDark
+        ? [const Color(0xFF1A1625).withOpacity(0.95), const Color(0xFF0F0B1A).withOpacity(0.9)]
+        : [Colors.white, const Color(0xFFFFF5F7)];
+    final borderColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.05);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () => _openFixedExpenseForm(expense: f),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: cardGradient,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor, width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: (isDark ? Colors.black : Colors.grey).withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withOpacity(0.08) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? Colors.white.withOpacity(0.15) : categoryColor.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(iconData, color: categoryColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      f.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    if (f.description.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          f.description,
+                          style: TextStyle(
+                            color: isDark ? Colors.white.withOpacity(0.6) : Colors.black54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    if (f.category?.name != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          f.category!.name,
+                          style: TextStyle(
+                            color: categoryColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Text(
+                '${f.amount.toStringAsFixed(0)}円',
+                style: TextStyle(
+                  color: amountColor,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

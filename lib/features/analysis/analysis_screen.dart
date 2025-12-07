@@ -84,6 +84,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     if (_loading || _stats == null || _prediction == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -102,127 +105,263 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     final topCats = byCat.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    // 直近比較などの追加分析はここに拡張可能
-
-    return SafeArea(
-      top: true,
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: ListView(
-          children: [
-            // Header month switcher
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  onPressed: () {
-                    AppState.instance.setCurrentMonth(
-                      DateTime(_currentMonth.year, _currentMonth.month - 1),
-                    );
-                  },
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                Text(DateFormat('yyyy/MM').format(_currentMonth),
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
-                IconButton(
-                  onPressed: () {
-                    AppState.instance.setCurrentMonth(
-                      DateTime(_currentMonth.year, _currentMonth.month + 1),
-                    );
-                  },
-                  icon: const Icon(Icons.chevron_right),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 4),
-            _card(
-              title: '今月の支出予測',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _metric('現在の支出', nf.format(prediction.currentSpending),
-                      Colors.redAccent),
-                  const SizedBox(height: 6),
-                  _metric(
-                      '予測支出（${totalDays}日間）',
-                      nf.format(prediction.predictedTotal),
-                      Colors.orangeAccent),
-                  const SizedBox(height: 6),
-                  _metric('予測収支', nf.format(forecastBalance),
-                      forecastBalance >= 0 ? Colors.green : Colors.red),
-                  const SizedBox(height: 6),
-                  Text(
-                      '月の進捗: ${prediction.monthlyProgress.toStringAsFixed(0)}%'),
-                  const SizedBox(height: 6),
-                  Text(
-                    '平均: ${nf.format(prediction.dailyAverage)}円/日・残り${prediction.remainingDays}日・精度: ${_confidenceLabel(prediction.confidence)}',
-                  ),
-                  const SizedBox(height: 6),
-                  Text('傾向: ${_trendLabel(prediction.trend)}'),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-            _card(
-              title: 'カテゴリ別ハイライト',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ...topCats.take(3).map((e) {
-                    final cat = _catMap[e.key];
-                    final name = cat?.name ?? '未分類';
-                    final percent = (byCat.values.isEmpty)
-                        ? 0
-                        : (e.value /
-                            byCat.values.reduce((a, b) => a + b) *
-                            100);
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        children: [
-                          Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                  color: _parseHex(cat?.color ?? '#999999'),
-                                  shape: BoxShape.circle)),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(name)),
-                          Text(
-                              '${nf.format(e.value)}円（${percent.toStringAsFixed(0)}%）',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600)),
-                        ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDark
+              ? [const Color(0xFF1A1625), const Color(0xFF0F0B1A)]
+              : [const Color(0xFFFFF5F7), const Color(0xFFF3E5F5)],
+        ),
+      ),
+      child: SafeArea(
+        top: true,
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: ListView(
+            children: [
+              // Header month switcher - 統一サイズ
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    );
-                  }),
-                  if (topCats.isEmpty)
-                    const Text('データがありません',
-                        style: TextStyle(color: Colors.grey)),
-                ],
+                      child: IconButton(
+                        onPressed: () {
+                          AppState.instance.setCurrentMonth(
+                            DateTime(_currentMonth.year, _currentMonth.month - 1),
+                          );
+                        },
+                        icon: const Icon(Icons.chevron_left, size: 20),
+                        color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                        padding: const EdgeInsets.all(8),
+                        constraints: const BoxConstraints(),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Icon(Icons.insights_rounded, 
+                          size: 16, 
+                          color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          DateFormat('yyyy年 MM月').format(_currentMonth),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: IconButton(
+                        onPressed: () {
+                          AppState.instance.setCurrentMonth(
+                            DateTime(_currentMonth.year, _currentMonth.month + 1),
+                          );
+                        },
+                        icon: const Icon(Icons.chevron_right, size: 20),
+                        color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                        padding: const EdgeInsets.all(8),
+                        constraints: const BoxConstraints(),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            // ヒントカードは削除
-          ],
+              const SizedBox(height: 16),
+              _card(
+                title: '今月の支出予測',
+                icon: Icons.trending_up_rounded,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _metric('現在の支出', nf.format(prediction.currentSpending),
+                        const Color(0xFFEF5350), Icons.shopping_cart_rounded),
+                    const SizedBox(height: 10),
+                    _metric(
+                        '予測支出（${totalDays}日間）',
+                        nf.format(prediction.predictedTotal),
+                        const Color(0xFFFF9800), Icons.auto_graph_rounded),
+                    const SizedBox(height: 10),
+                    _metric('予測収支', nf.format(forecastBalance),
+                        forecastBalance >= 0 ? const Color(0xFF66BB6A) : const Color(0xFFEF5350), Icons.account_balance_wallet_rounded),
+                    const SizedBox(height: 12),
+                    _infoRow(Icons.calendar_month_rounded, '月の進捗: ${prediction.monthlyProgress.toStringAsFixed(0)}%'),
+                    const SizedBox(height: 6),
+                    _infoRow(Icons.show_chart_rounded,
+                      '平均: ${nf.format(prediction.dailyAverage)}円/日・残り${prediction.remainingDays}日・精度: ${_confidenceLabel(prediction.confidence)}',
+                    ),
+                    const SizedBox(height: 6),
+                    _infoRow(Icons.timeline_rounded, '傾向: ${_trendLabel(prediction.trend)}'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+              _card(
+                title: 'カテゴリ別ハイライト',
+                icon: Icons.pie_chart_rounded,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...topCats.take(3).map((e) {
+                      final cat = _catMap[e.key];
+                      final name = cat?.name ?? '未分類';
+                      final color = _parseHex(cat?.color ?? '#999999');
+                      final percent = (byCat.values.isEmpty)
+                          ? 0
+                          : (e.value /
+                              byCat.values.reduce((a, b) => a + b) *
+                              100);
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isDark ? color.withOpacity(0.15) : color.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: color.withOpacity(0.3), width: 1),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: color.withOpacity(0.4),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${nf.format(e.value)}円（${percent.toStringAsFixed(0)}%）',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: color,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    if (topCats.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            'データがありません',
+                            style: TextStyle(
+                              color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _card({required String title, required Widget child}) {
-    return Card(
+  Widget _infoRow(IconData icon, String text) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? Colors.white.withOpacity(0.8) : Colors.black87,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _card({required String title, required Widget child, IconData? icon}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xFF9C27B0).withOpacity(0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0)).withOpacity(0.1),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             child,
           ],
         ),
@@ -230,19 +369,60 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     );
   }
 
-  Widget _metric(String label, String value, Color color) {
+  Widget _metric(String label, String value, Color color, IconData icon) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
-        const SizedBox(height: 4),
-        Text(value,
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(color: color, fontWeight: FontWeight.w700)),
-      ],
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [color.withOpacity(0.2), color.withOpacity(0.1)]
+              : [color.withOpacity(0.15), color.withOpacity(0.05)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? color.withOpacity(0.9) : color,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$value円',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

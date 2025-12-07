@@ -15,11 +15,15 @@ class FixedExpensesRepository {
     required String name,
     required double amount,
     required String type,
+    required int categoryId,
+    String? description,
   }) async {
     final res = await _api.postJson('/fixed-expenses', {
       'name': name,
       'amount': amount,
       'type': type,
+      'categoryId': categoryId,
+      'description': description ?? '',
     });
     return FixedExpense.fromJson(res as Map<String, dynamic>);
   }
@@ -29,11 +33,15 @@ class FixedExpensesRepository {
     required String name,
     required double amount,
     required String type,
+    required int categoryId,
+    String? description,
   }) async {
     final res = await _api.putJson('/fixed-expenses/$id', {
       'name': name,
       'amount': amount,
       'type': type,
+      'categoryId': categoryId,
+      'description': description ?? '',
     });
     return FixedExpense.fromJson(res as Map<String, dynamic>);
   }
