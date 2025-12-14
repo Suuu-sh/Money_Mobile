@@ -165,6 +165,10 @@ class _CategoryCreateSheetState extends State<CategoryCreateSheet> {
   final _color = TextEditingController(text: '#FF6B6B');
   final _icon = TextEditingController(text: 'food');
   bool _saving = false;
+  static const _colorPresets = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#F7B801', '#D4A5A5', '#7D83FF', '#26A69A', '#F48FB1'
+  ];
+  static const _iconPresets = ['food', 'shopping', 'transport', 'home', 'utilities', 'entertainment', 'education', 'salary'];
 
   @override
   void initState() {
@@ -209,7 +213,7 @@ class _CategoryCreateSheetState extends State<CategoryCreateSheet> {
               ? [const Color(0xFF1A1625), const Color(0xFF0F0B1A)]
               : [const Color(0xFFFFF5F7), const Color(0xFFF3E5F5)],
         ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SafeArea(
         child: Padding(
@@ -219,101 +223,132 @@ class _CategoryCreateSheetState extends State<CategoryCreateSheet> {
             bottom: MediaQuery.of(context).viewInsets.bottom + 20,
             top: 20,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.category_rounded,
-                    color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
-                    size: 24,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'カテゴリを作成',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 20,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.category_rounded,
                       color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                      size: 24,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              TextField(
-                controller: _name,
-                decoration: InputDecoration(
-                  labelText: '名前',
-                  prefixIcon: Icon(Icons.label_rounded, color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 10,
-                children: [
-                  _buildTypeChip('支出', Icons.arrow_circle_down_rounded, _type == 'expense', () {
-                    setState(() => _type = 'expense');
-                  }),
-                  _buildTypeChip('収入', Icons.arrow_circle_up_rounded, _type == 'income', () {
-                    setState(() => _type = 'income');
-                  }),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _color,
-                decoration: InputDecoration(
-                  labelText: '色（#RRGGBB）',
-                  prefixIcon: Icon(Icons.palette_rounded, color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _icon,
-                decoration: InputDecoration(
-                  labelText: 'アイコン（任意）',
-                  prefixIcon: Icon(Icons.emoji_emotions_rounded, color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _saving ? null : () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    const SizedBox(width: 10),
+                    Text(
+                      'カテゴリを作成',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 20,
+                        color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
                       ),
-                      child: const Text('キャンセル', style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _name,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  decoration: InputDecoration(
+                    labelText: '名前',
+                    prefixIcon: Icon(Icons.label_rounded, color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0)),
+                    filled: true,
+                    fillColor: isDark ? Colors.white.withOpacity(0.06) : Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton(
-                      onPressed: _saving ? null : _save,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  children: [
+                    _buildTypeChip('支出', Icons.arrow_circle_down_rounded, _type == 'expense', () {
+                      setState(() => _type = 'expense');
+                      _updateIconAndColor();
+                    }),
+                    _buildTypeChip('収入', Icons.arrow_circle_up_rounded, _type == 'income', () {
+                      setState(() => _type = 'income');
+                      _updateIconAndColor();
+                    }),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Text('カラー', style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black87)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: _colorPresets
+                      .map(
+                        (hex) => ChoiceChip(
+                          label: const SizedBox.shrink(),
+                          selected: _color.text.toLowerCase() == hex.toLowerCase(),
+                          onSelected: (_) => setState(() => _color.text = hex),
+                          backgroundColor: _hexToColor(hex).withOpacity(0.4),
+                          selectedColor: _hexToColor(hex),
+                          shape: const CircleBorder(),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 18),
+                Text('アイコン', style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black87)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: _iconPresets
+                      .map(
+                        (icon) => ChoiceChip(
+                          label: Icon(CategoryIcons.getIcon(icon), color: _icon.text == icon ? Colors.white : (isDark ? Colors.white70 : Colors.black54)),
+                          selected: _icon.text == icon,
+                          selectedColor: _hexToColor(_color.text),
+                          onSelected: (_) => setState(() => _icon.text = icon),
+                          backgroundColor: isDark ? Colors.white.withOpacity(0.08) : Colors.white,
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _saving ? null : () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: const Text('キャンセル', style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
-                      child: _saving
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('作成', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        onPressed: _saving ? null : _save,
+                        icon: const Icon(Icons.check_rounded),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        label: _saving
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('作成', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Color _hexToColor(String hex) {
+    final buffer = StringBuffer();
+    if (hex.length == 6 || hex.length == 7) buffer.write('ff');
+    buffer.write(hex.replaceFirst('#', ''));
+    return Color(int.parse(buffer.toString(), radix: 16));
   }
 
   Widget _buildTypeChip(String label, IconData icon, bool selected, VoidCallback onTap) {

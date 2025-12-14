@@ -4,6 +4,7 @@ import 'package:money_tracker_mobile/core/api_client.dart';
 import 'package:money_tracker_mobile/features/auth/auth_repository.dart';
 import 'package:money_tracker_mobile/features/categories/categories_repository.dart';
 import 'package:money_tracker_mobile/models/category.dart';
+import 'package:money_tracker_mobile/core/category_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -166,82 +167,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     );
                   },
-                ),
-              ),
-
-              const SizedBox(height: 16),
-              // Data management
-              _sectionCard(
-                title: 'データ',
-                icon: Icons.storage_rounded,
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final prefs = await SharedPreferences.getInstance();
-                        final map = <String, dynamic>{};
-                        for (final k in ['themeMode', 'startMonday', 'currency']) {
-                          if (prefs.containsKey(k)) map[k] = prefs.get(k);
-                        }
-                        final jsonText = const JsonEncoder.withIndent('  ').convert(map);
-                        if (context.mounted) {
-                          showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              title: const Text('設定をエクスポート'),
-                              content: SingleChildScrollView(child: SelectableText(jsonText)),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(context), child: const Text('閉じる'))
-                              ],
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.upload_rounded, size: 18),
-                      label: const Text('エクスポート'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final controller = TextEditingController();
-                        showDialog(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            title: const Text('設定をインポート'),
-                            content: TextField(
-                              controller: controller,
-                              maxLines: 8,
-                              decoration: const InputDecoration(hintText: '{\n  "themeMode": "dark"\n}'),
-                            ),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
-                              FilledButton(
-                                onPressed: () async {
-                                  try {
-                                    final data = jsonDecode(controller.text) as Map<String, dynamic>;
-                                    final prefs = await SharedPreferences.getInstance();
-                                    if (data.containsKey('themeMode')) await prefs.setString('themeMode', data['themeMode'] as String);
-                                    if (data.containsKey('startMonday')) await prefs.setBool('startMonday', data['startMonday'] as bool);
-                                    if (data.containsKey('currency')) await prefs.setString('currency', data['currency'] as String);
-                                    if (context.mounted) Navigator.pop(context);
-                                  } catch (_) {
-                                    if (context.mounted) Navigator.pop(context);
-                                  }
-                                  if (mounted) setState(() {});
-                                },
-                                child: const Text('読み込み'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.download_rounded, size: 18),
-                      label: const Text('インポート'),
-                    ),
-                  ],
                 ),
               ),
 
@@ -585,6 +510,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final color = _categoryColor(category, fallback: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0));
+    final iconData = category.icon.isNotEmpty
+        ? CategoryIcons.getIcon(category.icon)
+        : CategoryIcons.guessIcon(category.name, category.type);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
@@ -596,20 +524,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: color.withOpacity(0.4), width: 1.2),
             ),
             alignment: Alignment.center,
-            child: Text(
-              category.icon.isNotEmpty
-                  ? category.icon
-                  : (category.name.isNotEmpty ? category.name.substring(0, 1) : '?'),
-              style: TextStyle(color: color, fontWeight: FontWeight.w700),
-            ),
+            child: Icon(iconData, color: color, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(

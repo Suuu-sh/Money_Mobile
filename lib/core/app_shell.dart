@@ -57,8 +57,8 @@ class _AppShellState extends State<AppShell> {
         ),
         child: SafeArea(
           top: false,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 70, maxHeight: 70),
+        child: Container(
+            constraints: const BoxConstraints(minHeight: 76, maxHeight: 76),
             // padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom > 0 ? 0 : 4),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -242,7 +242,7 @@ class _PlusTab extends StatelessWidget {
     
     return Center(
       child: Transform.translate(
-        offset: const Offset(0, -16), // make it "pop" over the tab bar
+        offset: const Offset(0, -22), // make it "pop" over the tab bar
         child: InkResponse(
           onTap: onTap,
           radius: 32,

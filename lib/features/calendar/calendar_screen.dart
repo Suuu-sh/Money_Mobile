@@ -535,8 +535,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ? _parseHex(t.category!.color)
             : (isIncome ? const Color(0xFF66BB6A) : const Color(0xFFEF5350));
         final categoryIcon = t.category != null && t.category!.icon.isNotEmpty
-            ? _getCategoryIcon(t.category!.icon)
-            : _guessIcon(t.category?.name ?? '', t.type);
+            ? CategoryIcons.getIcon(t.category!.icon)
+            : CategoryIcons.guessIcon(t.category?.name ?? '', t.type);
         final cardGradientColors = isDark
             ? [const Color(0xFF1A1625).withOpacity(0.95), const Color(0xFF0F0B1A).withOpacity(0.9)]
             : [const Color(0xFFFFF5F7), const Color(0xFFF3E5F5)];
@@ -694,11 +694,4 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Color((alpha << 24) | val);
   }
 
-  IconData _getCategoryIcon(String iconName) {
-    return CategoryIcons.getIcon(iconName);
-  }
-
-  IconData _guessIcon(String categoryName, String type) {
-    return CategoryIcons.guessIcon(categoryName, type);
-  }
 }

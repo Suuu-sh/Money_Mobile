@@ -717,27 +717,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final isDark = theme.brightness == Brightness.dark;
     
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? [color.withOpacity(0.2), color.withOpacity(0.1)]
-              : [color.withOpacity(0.15), color.withOpacity(0.05)],
+              ? [color.withOpacity(0.18), color.withOpacity(0.08)]
+              : [color.withOpacity(0.12), color.withOpacity(0.04)],
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.25), width: 1.2),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
+              color: color.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -747,7 +747,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: isDark ? color.withOpacity(0.9) : color,
                   ),
@@ -758,7 +758,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.w800,
-                    fontSize: 20,
+                    fontSize: 18,
                   ),
                 ),
               ],

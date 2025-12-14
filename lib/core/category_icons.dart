@@ -12,9 +12,12 @@ class CategoryIcons {
       'transport': Icons.directions_car_rounded,
       'home': Icons.home_rounded,
       'health': Icons.favorite_rounded,
-      'entertainment': Icons.movie_rounded,
+      'entertainment': Icons.celebration_rounded,
       'education': Icons.school_rounded,
-      'utilities': Icons.lightbulb_rounded,
+      'utilities': Icons.power_rounded,
+      'energy': Icons.lightbulb_rounded,
+      'water': Icons.water_drop_rounded,
+      'gas': Icons.local_fire_department_rounded,
       'phone': Icons.phone_android_rounded,
       'insurance': Icons.shield_rounded,
       'gift': Icons.card_giftcard_rounded,
@@ -56,12 +59,14 @@ class CategoryIcons {
         return Icons.home_rounded;
       } else if (name.contains('医療') || name.contains('健康') || name.contains('病院')) {
         return Icons.favorite_rounded;
-      } else if (name.contains('娯楽') || name.contains('映画') || name.contains('ゲーム')) {
-        return Icons.movie_rounded;
+      } else if (name.contains('娯楽') || name.contains('遊') || name.contains('交際') || name.contains('デート')) {
+        return Icons.celebration_rounded;
       } else if (name.contains('教育') || name.contains('学')) {
         return Icons.school_rounded;
       } else if (name.contains('光熱') || name.contains('電気') || name.contains('ガス')) {
-        return Icons.lightbulb_rounded;
+        return Icons.power_rounded;
+      } else if (name.contains('水道') || name.contains('水費')) {
+        return Icons.water_drop_rounded;
       } else if (name.contains('通信') || name.contains('携帯') || name.contains('スマホ')) {
         return Icons.phone_android_rounded;
       } else if (name.contains('保険')) {
