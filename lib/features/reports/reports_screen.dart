@@ -65,6 +65,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   String _dateStr(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
+  Map<String, double> _monthTotals() {
+    final income = _monthTx
+        .where((t) => t.type == 'income')
+        .fold<double>(0, (sum, t) => sum + t.amount);
+    final expense = _monthTx
+        .where((t) => t.type == 'expense')
+        .fold<double>(0, (sum, t) => sum + t.amount);
+    return {'income': income, 'expense': expense};
+  }
+
   Future<void> _loadDetails() async {
     final start = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final end = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
@@ -135,6 +145,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           return Center(child: Text('読み込みエラー: ${snapshot.error}'));
         }
         final s = snapshot.data!;
+        final totals = _monthTotals();
         // Aggregate by category (current view)
         final byCategory = <int, double>{};
         if (_view == _ViewKind.expense || _view == _ViewKind.income) {
@@ -289,6 +300,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                   ..._buildTabContent(
                     s: s,
+                    monthIncome: totals['income'] ?? 0,
+                    monthExpense: totals['expense'] ?? 0,
                     nf: nf,
                     totalSelected: totalSelected,
                     sections: sections,
@@ -542,6 +555,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   List<Widget> _buildTabContent({
     required Stats s,
+    required double monthIncome,
+    required double monthExpense,
     required NumberFormat nf,
     required double totalSelected,
     required List<PieChartSectionData> sections,
@@ -549,7 +564,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }) {
     switch (_view) {
       case _ViewKind.summary:
-        return [_buildSummaryCard(s, nf)];
+        return [_buildSummaryCard(s, nf, monthIncome, monthExpense)];
       case _ViewKind.expense:
         return [
           _buildCategoryChartCard(
@@ -632,7 +647,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildSummaryCard(Stats s, NumberFormat nf) {
+  Widget _buildSummaryCard(Stats s, NumberFormat nf, double monthIncome, double monthExpense) {
     return _card(
       title: '今月の総計',
       icon: Icons.summarize_rounded,
@@ -641,49 +656,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
         children: [
           _metric(
             '収入',
-            nf.format(
-              s.thisMonthIncome +
-                  _fixed
-                      .where((f) => f.type == 'income')
-                      .fold<double>(0, (sum, f) => sum + f.amount),
-            ),
+            nf.format(monthIncome),
             const Color(0xFF66BB6A),
             Icons.arrow_circle_up_rounded,
           ),
           const SizedBox(height: 12),
           _metric(
             '支出',
-            nf.format(
-              s.thisMonthExpense +
-                  _fixed
-                      .where((f) => f.type == 'expense')
-                      .fold<double>(0, (sum, f) => sum + f.amount),
-            ),
+            nf.format(monthExpense),
             const Color(0xFFEF5350),
             Icons.arrow_circle_down_rounded,
           ),
           const SizedBox(height: 12),
           _metric(
             '収支',
-            nf.format(
-              (s.thisMonthIncome +
-                      _fixed
-                          .where((f) => f.type == 'income')
-                          .fold<double>(0, (sum, f) => sum + f.amount)) -
-                  (s.thisMonthExpense +
-                      _fixed
-                          .where((f) => f.type == 'expense')
-                          .fold<double>(0, (sum, f) => sum + f.amount)),
-            ),
-            ((s.thisMonthIncome +
-                        _fixed
-                            .where((f) => f.type == 'income')
-                            .fold<double>(0, (sum, f) => sum + f.amount)) -
-                    (s.thisMonthExpense +
-                        _fixed
-                            .where((f) => f.type == 'expense')
-                            .fold<double>(0, (sum, f) => sum + f.amount))) >=
-                0
+            nf.format(monthIncome - monthExpense),
+            (monthIncome - monthExpense) >= 0
                 ? const Color(0xFF66BB6A)
                 : const Color(0xFFEF5350),
             Icons.account_balance_wallet_rounded,

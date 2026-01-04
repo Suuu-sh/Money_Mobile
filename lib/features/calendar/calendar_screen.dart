@@ -7,6 +7,7 @@ import 'package:money_tracker_mobile/features/transactions/transactions_reposito
 import 'package:money_tracker_mobile/models/transaction.dart';
 import 'package:money_tracker_mobile/features/transactions/transaction_edit_sheet.dart';
 import 'package:money_tracker_mobile/core/category_icons.dart';
+import 'package:money_tracker_mobile/features/input/input_screen.dart';
 // import removed: input is opened from global FAB
 
 class CalendarScreen extends StatefulWidget {
@@ -83,7 +84,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
             _selectedDate!.month == _currentMonth.month) {
           resolved = _selectedDate!;
         } else {
-          resolved = start;
+          final now = DateTime.now();
+          if (now.year == _currentMonth.year && now.month == _currentMonth.month) {
+            resolved = DateTime(now.year, now.month, now.day);
+          } else {
+            resolved = start;
+          }
           _selectedDays[key] = resolved;
         }
         _selectedDate = resolved;
@@ -249,6 +255,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
         aspectRatio: 1,
         child: InkWell(
           onTap: () => _setSelectedDate(date),
+          onLongPress: () async {
+            _setSelectedDate(date);
+            final added = await _openAddTransaction(date);
+            if (added == true) {
+              _load();
+            }
+          },
           child: Container(
             margin: edgeToEdge ? EdgeInsets.zero : const EdgeInsets.all(2),
             padding: const EdgeInsets.all(4),
@@ -642,6 +655,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
       context: context,
       isScrollControlled: true,
       builder: (ctx) => TransactionEditSheet(transaction: t),
+    );
+  }
+
+  Future<bool?> _openAddTransaction(DateTime date) async {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => InputScreen(initialDate: date),
     );
   }
 
