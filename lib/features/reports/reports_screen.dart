@@ -93,6 +93,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
     List<CategoryBudget> budgets = [];
     try {
       budgets = await _budRepo.listByMonth(_currentMonth);
+      final now = DateTime.now();
+      final isCurrentOrFuture = _currentMonth.year > now.year ||
+          (_currentMonth.year == now.year && _currentMonth.month >= now.month);
+      if (budgets.isEmpty && isCurrentOrFuture) {
+        final prevMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+        final prevBudgets = await _budRepo.listByMonth(prevMonth);
+        if (prevBudgets.isNotEmpty) {
+          for (final b in prevBudgets) {
+            try {
+              await _budRepo.create(
+                categoryId: b.categoryId,
+                year: _currentMonth.year,
+                month: _currentMonth.month,
+                amount: b.amount,
+              );
+            } catch (_) {}
+          }
+          budgets = await _budRepo.listByMonth(_currentMonth);
+        }
+      }
     } catch (_) {}
     if (!mounted) return;
     setState(() {
@@ -108,6 +128,175 @@ class _ReportsScreenState extends State<ReportsScreen> {
     AppState.instance.currentMonth.removeListener(_monthListener);
     AppState.instance.dataVersion.removeListener(_dataListener);
     super.dispose();
+  }
+
+  Future<void> _openBudgetEditor(CategoryBudget budget) async {
+    final controller = TextEditingController(
+      text: budget.amount.toStringAsFixed(0),
+    );
+    final updated = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        bool saving = false;
+        String? error;
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final theme = Theme.of(context);
+            final isDark = theme.brightness == Brightness.dark;
+            final categoryName = budget.category?.name ?? '未分類';
+            return Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: isDark
+                      ? [const Color(0xFF1A1625), const Color(0xFF0F0B1A)]
+                      : [const Color(0xFFFFF5F7), const Color(0xFFF3E5F5)],
+                ),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                    top: 20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.account_balance_wallet_rounded,
+                            color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                            size: 24,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            '予算を編集',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 20,
+                              color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        categoryName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: '予算金額',
+                          prefixIcon: Icon(Icons.payments_rounded, color: isDark ? const Color(0xFFE1BEE7) : const Color(0xFF9C27B0)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                      if (error != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF5350).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFEF5350), width: 1.5),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_rounded, color: Color(0xFFEF5350), size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  error!,
+                                  style: const TextStyle(color: Color(0xFFEF5350), fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: saving ? null : () => Navigator.pop(context, false),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              child: const Text('キャンセル', style: TextStyle(fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton(
+                              onPressed: saving
+                                  ? null
+                                  : () async {
+                                      final amount = double.tryParse(controller.text.trim());
+                                      if (amount == null || amount <= 0) {
+                                        setSheetState(() => error = '正しい金額を入力してください');
+                                        return;
+                                      }
+                                      setSheetState(() {
+                                        saving = true;
+                                        error = null;
+                                      });
+                                      try {
+                                        await _budRepo.update(
+                                          budget.id,
+                                          categoryId: budget.categoryId,
+                                          year: budget.year,
+                                          month: budget.month,
+                                          amount: amount,
+                                        );
+                                        AppState.instance.bumpDataVersion();
+                                        if (mounted) Navigator.pop(context, true);
+                                      } catch (_) {
+                                        setSheetState(() => error = '予算の更新に失敗しました');
+                                      } finally {
+                                        if (mounted) setSheetState(() => saving = false);
+                                      }
+                                    },
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              child: saving
+                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Text('保存', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    controller.dispose();
+    if (updated == true && mounted) {
+      _loadDetails();
+    }
   }
 
   Future<void> _openFixedExpenseForm({FixedExpense? expense}) async {
@@ -512,44 +701,70 @@ class _ReportsScreenState extends State<ReportsScreen> {
         child: Text('予算データがありません', style: TextStyle(color: Colors.grey)),
       );
     }
+    final sortedBudgets = [..._budgets]..sort((a, b) => b.amount.compareTo(a.amount));
+    final totalBudget = sortedBudgets.fold<double>(0, (sum, b) => sum + b.amount);
     return Column(
-      children: _budgets.map((b) {
-        final spent = b.spent;
-        final budget = b.amount;
-        final pct = budget <= 0 ? 0.0 : (spent / budget).clamp(0.0, 1.0);
-        final over = spent > budget;
-        final barColor = over ? Colors.red : Colors.green;
-        final categoryName = b.category?.name ?? '未分類';
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      categoryName,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  Text('${nf.format(spent)}円 / ${nf.format(budget)}円', style: const TextStyle(fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: pct,
-                  minHeight: 8,
-                  color: barColor,
-                  backgroundColor: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
+              const Expanded(
+                child: Text(
+                  '予算合計',
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
+              ),
+              Text(
+                '${nf.format(totalBudget)}円',
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ],
           ),
+        ),
+        const Divider(height: 16),
+        ...sortedBudgets.map((b) {
+          final spent = b.spent;
+          final budget = b.amount;
+          final pct = budget <= 0 ? 0.0 : (spent / budget).clamp(0.0, 1.0);
+          final over = spent > budget;
+          final barColor = over ? Colors.red : Colors.green;
+          final categoryName = b.category?.name ?? '未分類';
+        return InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _openBudgetEditor(b),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        categoryName,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Text('${nf.format(spent)}円 / ${nf.format(budget)}円', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: pct,
+                    minHeight: 8,
+                    color: barColor,
+                    backgroundColor: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
-      }).toList(),
+      }),
+      ],
     );
   }
 
