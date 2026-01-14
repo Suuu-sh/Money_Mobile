@@ -703,6 +703,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
     final sortedBudgets = [..._budgets]..sort((a, b) => b.amount.compareTo(a.amount));
     final totalBudget = sortedBudgets.fold<double>(0, (sum, b) => sum + b.amount);
+    final totalSpent = sortedBudgets.fold<double>(0, (sum, b) => sum + b.spent);
     return Column(
       children: [
         Padding(
@@ -716,7 +717,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
               ),
               Text(
-                '${nf.format(totalBudget)}円',
+                '${nf.format(totalSpent)}円 / ${nf.format(totalBudget)}円',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ],
